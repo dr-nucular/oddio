@@ -1,0 +1,78 @@
+<script>
+
+	//import Visibility from '';
+	import { onMount, onDestroy } from 'svelte';
+	import { uiModulesData, audioContextData } from '../stores.js';
+	import Oddio from '$lib/Oddio.js';
+
+	export let modules = {};
+	export let ac = {};
+
+	uiModulesData.subscribe(obj => modules = obj);
+	audioContextData.subscribe(obj => ac = obj);
+
+	$: cssVarStyles = `--bgColor:${modules.audioContext?.bgColor}`;
+
+	let frame;
+	let mTime = {};
+	const loop = function() {
+		frame = requestAnimationFrame(loop);
+		mTime = Oddio.getPlayheadNow();
+	};
+	const startLoop = () => {
+		if (!frame) {
+			console.log(`startLoop...`);
+			loop();
+		} else {
+			console.log(`startLoop already started`);
+		}
+	};
+	const stopLoop = () => {
+		if (frame) {
+			console.log(`stopLoop...`);
+			cancelAnimationFrame(frame);
+			frame = undefined;
+		} else {
+			console.log(`stopLoop already stopped`);
+		}
+	};
+	const setPlayheadParams = (opts = {}) => {
+		const timeReference = Oddio.setPlayheadParams(opts);
+		console.log(`resetCurrentTime: ${JSON.stringify(timeReference, null, 2)}`);
+	};
+
+
+	onMount(() => {
+		console.log(`ON MOUNT`);
+		startLoop(); // TODO: only do this if the audio context is running?
+	});
+	onDestroy(() => {
+		console.log(`ON DESTROY`);
+		stopLoop();
+	});
+
+
+</script>
+
+
+<div
+	style={cssVarStyles}
+	class="content-module">
+	<b>Audio Context</b><hr/>
+	<button on:click={() => setPlayheadParams({ playheadTime: 0 })}>Reset Playhead to Zero</button><br/>
+	<button on:click={() => setPlayheadParams({ playheadSpeed: 1 })}>Play</button>
+	<button on:click={() => setPlayheadParams({ playheadSpeed: 0.1 })}>Slow</button>
+	<button on:click={() => setPlayheadParams({ playheadSpeed: 0 })}>Stop</button><br/>
+	<i>- State: {ac.state}</i><br/>
+	<i>- AudioContext Time: {mTime.currentTime}</i><br/>
+	<i>- Playhead Time: {mTime.now}</i>
+</div>
+
+
+<style>
+	div.content-module {
+		background:
+			linear-gradient(to top, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.5) 100%),
+			var(--bgColor);
+	}
+</style>
