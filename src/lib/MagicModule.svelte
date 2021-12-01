@@ -1,5 +1,4 @@
 <script>
-
 	import { uiDetails } from '../stores.js';
 
 	export let text = "button";
@@ -21,10 +20,7 @@
 	};
 
 	visible && setModuleAppearance(moduleName, visible, color);
-	
-
 </script>
-
 
 <div class="content-module">
 	style={cssVarStyles}
@@ -33,9 +29,7 @@
 	{text}
 </div>
 
-
 <style>
-
 div.content-module {
 	background:
 		linear-gradient(to top, rgba(255,255,255,0.15) 0%, rgba(127,127,127,0.15) 100%),
@@ -43,5 +37,4 @@ div.content-module {
 	padding: 15px;
 	margin: 0 0 20px 0;
 }
-
 </style>

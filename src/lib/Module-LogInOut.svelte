@@ -1,39 +1,32 @@
 <script>
-
-	import { firebaseLogin, firebaseLogout, firebaseCurrentUser } from '../firebase.js';
-
+	import { firebaseLogin, firebaseLogout } from '../firebase.js';
 	import { uiModulesData, authData } from '../stores.js';
-	export let modules = {};
 
-	export let title = 'Log In';
+	let modules = {};
+	let isLoggedIn = false;
+	let title = 'Log In';
+	let email = null;
 	authData.subscribe(obj => {
-		title = obj.isLoggedIn ? "Log Out" : "Log In";
+		isLoggedIn = obj.isLoggedIn;
+		title = isLoggedIn ? "Log Out" : "Log In";
+		email = obj.username;
 	});
-
 	uiModulesData.subscribe(obj => modules = obj);
 	$: cssVarStyles = `--bgColor:${modules.logInOut?.bgColor}`;
-
 </script>
-
 
 <div
 	style={cssVarStyles}
 	class="content-module">
 	<b>{title}</b><hr/>
-	Make this dynamic of course.  Use Firebase's Cloud Firestore & Authentication<br/>
-
-	<b>firebaseCurrentUser: {firebaseCurrentUser()?.email}</b><br/>
-
-	<button on:click={firebaseLogin}>
-		Login using google
-	</button>
-
-	<button on:click={firebaseLogout}>
-		Logout
-	</button>
-
+	{#if isLoggedIn}
+		You are logged in with Google account {email}.<br/><br/>
+		<button on:click={firebaseLogout}>Log Out</button>	
+	{:else}
+		You are not currently logged in.<br/><br/>
+		<button on:click={firebaseLogin}>Log In</button> using Google authentication
+	{/if}
 </div>
-
 
 <style>
 	div.content-module {

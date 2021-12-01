@@ -3,35 +3,39 @@
 </svelte:head>
 
 <script>
-	
 	import '../app.css';
-
 	import Logo from '$lib/Logo.svelte';
 	import TopNav from '$lib/TopNav.svelte';
 	import LeftNav from '$lib/LeftNav.svelte';
 	import Main from '$lib/Main.svelte';
-	export let logoName = "oddio";
-
-
-
-
-
+	import { firebaseCreateUserObserver } from '../firebase.js';
 	import { authData } from '../stores.js';
-	//export let my_authData = {};
-	//authData.subscribe(obj => my_authData = obj);
-
 	import { onMount, onDestroy } from 'svelte';
-	import Auth from '$lib/Auth.js';
-	//export let isLoggedIn = false;
+
+	const logoName = "oddio";
+
 	onMount(async () => {
-		console.log(`index ON MOUNT`);
-		authData.isLoggedIn = await Auth.isLoggedIn();
-		authData.isBusy = false;
-		console.log(`isLoggedIn = ${authData.isLoggedIn}`);
+		console.log(`index.onMount()...`);
+		authData.isBusy = true;
 		authData.set(authData);
+		firebaseCreateUserObserver((user) => {
+			if (user) {
+				// User has signed in, see docs for a list of available properties
+				// https://firebase.google.com/docs/reference/js/firebase.User
+				authData.isLoggedIn = true;
+				authData.username = user.email;
+				// ? display logout button here?
+			} else {
+				// User has signed out or there was an error using firebase
+				// ? display login button here?
+				authData.isLoggedIn = false;
+				authData.username = null;
+			}
+			authData.isBusy = false;
+			authData.set(authData);
+			console.log(`firebaseCreateUserObserver callback: authData = ${JSON.stringify(authData, null, 2)}`);
+		});
 	});
-
-
 
 /*
 	import Oddio from '$lib/Oddio.js';
@@ -43,7 +47,6 @@
 	}
 	initAC();
 */
-
 </script>
 
 <div class="wrapper">
@@ -54,7 +57,7 @@
 		<TopNav/>
 	</div>
 	<div class="box leftnav">
-		<LeftNav showAudioContext=true/>
+		<LeftNav/>
 	</div>
 	<div class="box content">
 		<Main/>

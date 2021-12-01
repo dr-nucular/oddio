@@ -54,11 +54,21 @@ export const firebaseCurrentUser = () => {
 		if (user) {
 			console.log(`firebaseCurrentUser: ${user.email} (${user.displayName})`);
 		} else {
-			console.log(`firebaseCurrentUser: no user currently logged in`);
+			console.log(`firebaseCurrentUser: no user currently logged in, or auth obj hasn't finished initializing`);
 		}
 		return user;
 	} catch (err) {
 		console.log(`firebaseCurrentUser ERROR: ${err}`);
+	}
+};
+
+export const firebaseCreateUserObserver = (cb) => {
+	try {
+		const auth = getAuth(firebaseApp);
+		onAuthStateChanged(auth, cb);
+	} catch (err) {
+		console.log(`firebaseCreateUserObserver ERROR: ${err}`);
+		cb();
 	}
 };
 

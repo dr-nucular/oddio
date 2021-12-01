@@ -1,22 +1,26 @@
 <script>
+	import { uiModulesData, authData } from '../stores.js';
 
-	import { uiModulesData } from '../stores.js';
-
-	export let modules = {};
-
+	let modules = {};
+	let isLoggedIn = false;
+	let email = null;
+	authData.subscribe(obj => {
+		isLoggedIn = obj.isLoggedIn;
+		email = obj.username;
+	});
 	uiModulesData.subscribe(obj => modules = obj);
 	$: cssVarStyles = `--bgColor:${modules.loadProject?.bgColor}`;
-
 </script>
-
 
 <div
 	style={cssVarStyles}
 	class="content-module">
 	<b>Load Project</b><hr/>
-	TBD!!?!
+	{#if isLoggedIn}
+		Your projects:<br/><br/>
+	{/if}
+	Public projects:
 </div>
-
 
 <style>
 	div.content-module {

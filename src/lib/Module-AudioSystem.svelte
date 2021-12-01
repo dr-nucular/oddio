@@ -1,17 +1,14 @@
 <script>
-
 	//import Visibility from '';
 	import { onMount, onDestroy } from 'svelte';
 	import { uiModulesData, audioContextData } from '../stores.js';
 	import Oddio from '$lib/Oddio.js';
 
-	export let modules = {};
-	export let ac = {};
-
+	let modules = {};
+	let ac = {};
 	uiModulesData.subscribe(obj => modules = obj);
 	audioContextData.subscribe(obj => ac = obj);
-
-	$: cssVarStyles = `--bgColor:${modules.audioContext?.bgColor}`;
+	$: cssVarStyles = `--bgColor:${modules.AudioSystem?.bgColor}`;
 
 	let frame;
 	let mTime = {};
@@ -21,44 +18,39 @@
 	};
 	const startLoop = () => {
 		if (!frame) {
-			console.log(`startLoop...`);
+			console.log(`startLoop (raf)...`);
 			loop();
 		} else {
-			console.log(`startLoop already started`);
+			console.log(`startLoop (raf) already started`);
 		}
 	};
 	const stopLoop = () => {
 		if (frame) {
-			console.log(`stopLoop...`);
+			console.log(`stopLoop (raf)...`);
 			cancelAnimationFrame(frame);
 			frame = undefined;
 		} else {
-			console.log(`stopLoop already stopped`);
+			console.log(`stopLoop (raf) already stopped`);
 		}
 	};
 	const setPlayheadParams = (opts = {}) => {
 		const timeReference = Oddio.setPlayheadParams(opts);
 		console.log(`resetCurrentTime: ${JSON.stringify(timeReference, null, 2)}`);
 	};
-
-
 	onMount(() => {
-		console.log(`ON MOUNT`);
+		//console.log(`ON MOUNT`);
 		startLoop(); // TODO: only do this if the audio context is running?
 	});
 	onDestroy(() => {
-		console.log(`ON DESTROY`);
+		//console.log(`ON DESTROY`);
 		stopLoop();
 	});
-
-
 </script>
-
 
 <div
 	style={cssVarStyles}
 	class="content-module">
-	<b>Audio Context</b><hr/>
+	<b>Audio System</b><hr/>
 	<button on:click={() => setPlayheadParams({ playheadTime: 0 })}>Reset Playhead to Zero</button><br/>
 	<button on:click={() => setPlayheadParams({ playheadSpeed: 1 })}>Play</button>
 	<button on:click={() => setPlayheadParams({ playheadSpeed: 0.1 })}>Slow</button>
@@ -67,7 +59,6 @@
 	<i>- AudioContext Time: {mTime.currentTime}</i><br/>
 	<i>- Playhead Time: {mTime.now}</i>
 </div>
-
 
 <style>
 	div.content-module {

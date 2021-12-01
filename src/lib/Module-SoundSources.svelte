@@ -1,14 +1,10 @@
 <script>
-
 	import { uiModulesData, soundSourcesData } from '../stores.js';
 
-	export let modules = {};
-
+	let modules = {};
 	uiModulesData.subscribe(obj => modules = obj);
 	$: cssVarStyles = `--bgColor:${modules.soundSources?.bgColor}`;
-
 </script>
-
 
 <div
 	style={cssVarStyles}
@@ -20,7 +16,6 @@
 		{/each} 
 	</ul>
 </div>
-
 
 <style>
 	div.content-module {

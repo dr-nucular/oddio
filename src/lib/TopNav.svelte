@@ -1,24 +1,17 @@
 <script>
-
 	import MagicButton from './MagicButton.svelte';
-
-	export let showLogInOut = false;
-	export let showLoadProject = false;
-
-
 	import { authData } from '../stores.js';
-	export let authButtonText = 'Log In?';
-	export let authButtonDisabled = true;
+
+	export let showLoadProject = false;
+	export let showLogInOut = false;
+
+	let authButtonText = 'Log In/Out';
+	let authButtonDisabled = true;
 	authData.subscribe(obj => {
 		authButtonText = obj.isLoggedIn ? "Log Out" : "Log In";
 		authButtonDisabled = obj.isBusy;
 	});
-
-
-
-
 </script>
-
 
 <MagicButton text="Load Project" color="#dd9999" moduleName="loadProject" visible={showLoadProject}/>
 &nbsp;
