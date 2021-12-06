@@ -1,4 +1,5 @@
 <script>
+	import { firebaseAddDoc, createProject } from '../firebase.js';
 	import { uiModulesData, authData } from '../stores.js';
 
 	let modules = {};
@@ -10,6 +11,11 @@
 	});
 	uiModulesData.subscribe(obj => modules = obj);
 	$: cssVarStyles = `--bgColor:${modules.loadProject?.bgColor}`;
+
+	const createNewProject = (projName) => {
+		createProject(`test ${Math.random()}`);
+	};
+
 </script>
 
 <div
@@ -18,6 +24,8 @@
 	<b>Load Project</b><hr/>
 	{#if isLoggedIn}
 		Your projects:<br/><br/>
+
+		<button on:click={() => createNewProject('placeholder name')}>Create New</button><br/>
 	{/if}
 	Public projects:
 </div>
