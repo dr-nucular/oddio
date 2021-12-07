@@ -1,5 +1,5 @@
 <script>
-	import { firebaseAddDoc, createProject } from '../firebase.js';
+	import { readProjects, createProject } from '../firebase.js';
 	import { uiModulesData, authData } from '../stores.js';
 
 	let modules = {};
@@ -11,6 +11,20 @@
 	});
 	uiModulesData.subscribe(obj => modules = obj);
 	$: cssVarStyles = `--bgColor:${modules.loadProject?.bgColor}`;
+
+	//const myProjects = readProjects();
+
+
+
+	let myProjects = [{ id: 123, data: {name: "yes"} }, { id: 234, data: {name: "yes2"} }];
+	const getMyProjects = async () => {
+		myProjects = await readProjects();
+	};
+	getMyProjects();
+
+
+
+
 
 	const createNewProject = (projName) => {
 		createProject(`test ${Math.random()}`);
@@ -24,7 +38,13 @@
 	<b>Load Project</b><hr/>
 	{#if isLoggedIn}
 		Your projects:<br/><br/>
-
+		<ul>
+			{#each myProjects as project, p}
+				<li><a href="temp_{project.id}">
+					{p + 1}: {project.data?.name}
+				</a></li>
+			{/each}
+		</ul>
 		<button on:click={() => createNewProject('placeholder name')}>Create New</button><br/>
 	{/if}
 	Public projects:

@@ -105,11 +105,16 @@ export const firebaseGetDocs = async (collectionName) => {
 // PRJECTS //
 export const readProjects = async (limit = 100, offset = 0) => {
 	const querySnapshot = await getDocs(collection(db, 'projects'));
-	console.log(`readProjects:`);
-	querySnapshot.forEach((doc, d) => {
-		console.log(`#${d}: ${doc.id} => ${doc.data()}`);
+	//console.log(`readProjects: ${JSON.stringify(querySnapshot, null, 2)}`);
+	const results = [];
+	querySnapshot.forEach((doc) => {
+		console.log(`${doc.id} => ${doc.data()}`);
+		results.push({
+			id: doc.id,
+			data: doc.data()
+		});
 	});
-	return querySnapshot;
+	return results;
 };
 export const createProject = async (name) => {
 	try {
