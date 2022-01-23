@@ -1,10 +1,12 @@
 <script>
-	import { uiModulesData } from '../stores.js';
+	import { sModules } from '../stores.js';
 
 	let modules = {};
-	uiModulesData.subscribe(obj => modules = obj);
+
+	sModules.subscribe(obj => modules = obj);
 	$: cssVarStyles = `--bgColor:${modules.waveforms?.bgColor}`;
 </script>
+
 
 <div
 	style={cssVarStyles}
@@ -12,6 +14,7 @@
 	<b>Waveforms</b><hr/>
 	TBD!!?!
 </div>
+
 
 <style>
 	div.content-module {

@@ -1,5 +1,5 @@
 <svelte:head>
-	<title>Oddio</title>
+	<title>Odddio</title>
 </svelte:head>
 
 <script>
@@ -9,31 +9,38 @@
 	import LeftNav from '$lib/LeftNav.svelte';
 	import Main from '$lib/Main.svelte';
 	import { firebaseCreateUserObserver } from '../firebase.js';
-	import { authData } from '../stores.js';
+	import { sAuthInfo } from '../stores.js';
 	import { onMount, onDestroy } from 'svelte';
 
-	const logoName = "oddio";
+	const logoName = "odddio";
+	let authInfo = {};
+
+	sAuthInfo.subscribe(obj => authInfo = obj);
 
 	onMount(async () => {
 		console.log(`index.onMount()...`);
-		authData.isBusy = true;
-		authData.set(authData);
+		authInfo.isBusy = true;
+		sAuthInfo.set(authInfo);
 		firebaseCreateUserObserver((user) => {
 			if (user) {
 				// User has signed in, see docs for a list of available properties
 				// https://firebase.google.com/docs/reference/js/firebase.User
-				authData.isLoggedIn = true;
-				authData.username = user.email;
-				// ? display logout button here?
+				authInfo.isLoggedIn = true;
+				authInfo.username = user.email;
+
+				// also init/populate a bunch of store data?  at least projects?
+				
 			} else {
 				// User has signed out or there was an error using firebase
-				// ? display login button here?
-				authData.isLoggedIn = false;
-				authData.username = null;
+				authInfo.isLoggedIn = false;
+				authInfo.username = null;
+
+				// clear/reset store data here?  hmm doesn't seem to work as i was imagining
+
 			}
-			authData.isBusy = false;
-			authData.set(authData);
-			console.log(`firebaseCreateUserObserver callback: authData = ${JSON.stringify(authData, null, 2)}`);
+			authInfo.isBusy = false;
+			sAuthInfo.set(authInfo);
+			console.log(`firebaseCreateUserObserver callback: authInfo = ${JSON.stringify(authInfo, null, 2)}`);
 		});
 	});
 
@@ -89,7 +96,7 @@
 	}
 	.topnav {
 		padding-bottom: 15px;
-		text-align: right;
+		text-align: left;
 	}
 	.leftnav {
 		text-align: right;

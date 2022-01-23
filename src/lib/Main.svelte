@@ -1,36 +1,45 @@
 <script>
-	import { uiModulesData } from '../stores.js';
-	import LogInOutModule from '$lib/Module-LogInOut.svelte';
-	import LoadProjectModule from '$lib/Module-LoadProject.svelte';
+	import { sModules } from '../stores.js';
+	import AuthModule from '$lib/Module-Auth.svelte';
+	import ProjectsModule from '$lib/Module-Projects.svelte';
+	import SoundSetsModule from '$lib/Module-SoundSets.svelte';
+	import GraphsModule from '$lib/Module-Graphs.svelte';
+	import CompositionsModule from '$lib/Module-Compositions.svelte';
 	import AudioSystemModule from '$lib/Module-AudioSystem.svelte';
 	import WaveformsModule from '$lib/Module-Waveforms.svelte';
-	import SoundSourcesModule from '$lib/Module-SoundSources.svelte';
-	import ChannelGraphModule from '$lib/Module-ChannelGraph.svelte';
-	
+
 	let modules = {};
-	uiModulesData.subscribe(obj => modules = obj);
+
+	sModules.subscribe(obj => modules = obj);
 </script>
 
-{#if modules.logInOut?.visible}
-	<LogInOutModule/>
+
+{#if modules.auth?.visible}
+	<AuthModule/>
 {/if}
 
-{#if modules.loadProject?.visible}
-	<LoadProjectModule/>
+{#if modules.projects?.visible}
+	<ProjectsModule/>
 {/if}
 
-{#if modules.AudioSystem?.visible}
+{#if modules.soundSets?.visible}
+	<SoundSetsModule/>
+{/if}
+
+{#if modules.graphs?.visible}
+	<GraphsModule/>
+{/if}
+
+{#if modules.compositions?.visible}
+	<CompositionsModule/>
+{/if}
+
+{#if modules.audioSystem?.visible}
 	<AudioSystemModule/>
-{/if}
-
-{#if modules.soundSources?.visible}
-	<SoundSourcesModule/>
 {/if}
 
 {#if modules.waveforms?.visible}
 	<WaveformsModule/>
 {/if}
 
-{#if modules.channelGraph?.visible}
-	<ChannelGraphModule/>
-{/if}
+

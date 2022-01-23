@@ -1,18 +1,20 @@
 <script>
 	import { firebaseLogin, firebaseLogout } from '../firebase.js';
-	import { uiModulesData, authData } from '../stores.js';
+	import { sModules, sAuthInfo } from '../stores.js';
 
 	let modules = {};
 	let isLoggedIn = false;
 	let title = 'Log In';
 	let email = null;
-	authData.subscribe(obj => {
+
+	sAuthInfo.subscribe(obj => {
 		isLoggedIn = obj.isLoggedIn;
 		title = isLoggedIn ? "Log Out" : "Log In";
 		email = obj.username;
 	});
-	uiModulesData.subscribe(obj => modules = obj);
-	$: cssVarStyles = `--bgColor:${modules.logInOut?.bgColor}`;
+	
+	sModules.subscribe(obj => modules = obj);
+	$: cssVarStyles = `--bgColor:${modules.auth?.bgColor}`;
 </script>
 
 <div

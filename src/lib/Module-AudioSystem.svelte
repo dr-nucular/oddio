@@ -1,14 +1,16 @@
 <script>
 	//import Visibility from '';
 	import { onMount, onDestroy } from 'svelte';
-	import { uiModulesData, audioContextData } from '../stores.js';
+	import { sModules, audioContextData } from '../stores.js';
 	import Oddio from '$lib/Oddio.js';
 
 	let modules = {};
 	let ac = {};
-	uiModulesData.subscribe(obj => modules = obj);
+
+	sModules.subscribe(obj => modules = obj);
+	$: cssVarStyles = `--bgColor:${modules.audioSystem?.bgColor}`;
+
 	audioContextData.subscribe(obj => ac = obj);
-	$: cssVarStyles = `--bgColor:${modules.AudioSystem?.bgColor}`;
 
 	let frame;
 	let mTime = {};

@@ -1,12 +1,16 @@
 import { initializeApp } from "firebase/app";
 import { getAuth, signInWithPopup, signOut, onAuthStateChanged, GoogleAuthProvider } from "firebase/auth";
-import { getFirestore, collection, addDoc, updateDoc, deleteDoc, getDocs, serverTimestamp } from "firebase/firestore";
+import {
+	getFirestore, collection, query, where, orderBy, limit,
+	doc, getDoc, getDocs, addDoc, updateDoc, deleteDoc,
+	serverTimestamp
+} from "firebase/firestore";
 //import { getAnalytics } from "firebase/analytics";
-//
+
 // TODO: Add SDKs for Firebase products that you want to use
 // https://firebase.google.com/docs/web/setup#available-libraries
 
-// Your web app's Firebase configuration
+// Firebase configuration
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
   apiKey: "AIzaSyDphv39jnv7UcFhH94XFajtfa12gpG48wY",
@@ -25,7 +29,9 @@ const db = getFirestore();
 //const analytics = getAnalytics(firebaseApp);
 
 
-// Auth methods
+//////////
+// AUTH //
+//////////
 export const firebaseLogin = async () => {
 	try {
 		const auth = getAuth(firebaseApp);
@@ -52,9 +58,10 @@ export const firebaseLogout = async () => {
 };
 
 export const firebaseCurrentUser = (strict = false) => {
+	let user;
 	try {
 		const auth = getAuth(firebaseApp);
-		const user = auth.currentUser;
+		user = auth.currentUser;
 		if (user) {
 			console.log(`firebaseCurrentUser: ${user.email} (${user.displayName})`);
 		} else {
@@ -82,41 +89,137 @@ export const firebaseCreateUserObserver = (cb) => {
 	}
 };
 
-// db methods
-export const firebaseAddDoc = async (collectionName, data) => {
+
+
+/////////////////////////////////////
+// QUERY & CRUD general content:   //
+// soundSets, graphs, compositions //
+/////////////////////////////////////
+
+export const queryContent = async (collectionName, projectId, limitNum = 100, offset = 0) => {
 	try {
-		const docRef = await addDoc(collection(db, collectionName), data);
-		console.log(`firebaseAddDoc: Document written with id: ${docRef.id}`);
+		//const user = firebaseCurrentUser(true);
+		const projectDocRef = doc(db, "projects", projectId);
+		const q = query(
+			collection(db, collectionName),
+			//where('userId', '==', user.uid),
+			//where('project', '==', projectDocRef),
+			orderBy('updatedAt', 'desc'),
+			limit(limitNum)
+		);
+		const querySnap = await getDocs(q);
+		const results = [];
+		querySnap.forEach((docSnap) => {
+			console.log(`${docSnap.id} => ${JSON.stringify(docSnap.data(), null, 2)}`);
+			results.push({
+				id: docSnap.id,
+				data: docSnap.data()
+			});
+		});
+		return results;		
 	} catch (err) {
-		console.error(`firebaseAddDoc ERROR: ${err}`);
+		console.error(`queryContent ERROR: ${err}`);
+	}
+};
+export const readContent = async (collectionName, id) => {
+	try {
+		const docRef = doc(db, collectionName, id);
+		const docSnap = await getDoc(docRef);
+		if (docSnap.exists()) {
+			console.log(`readContent (id: ${id}):`, docSnap.data());
+			return { id: docSnap.id, data: docSnap.data() };
+		} else {
+			// doc.data() will be undefined in this case
+			throw `No such document with id: ${id}!`;
+		}
+	} catch (err) {
+		console.error(`readContent ERROR: ${err}`);
+	}
+};
+export const createContent = async (collectionName, data) => {
+	// data = { project: 'projectRef/here', name: 'something', configJson: 'stringifiedJson goes here' }
+	try {
+		const user = firebaseCurrentUser(true);
+		const ts = serverTimestamp();
+		const docSnap = await addDoc(collection(db, collectionName), {
+			userId: user.uid,
+			createdAt: ts,
+			updatedAt: ts,
+			project: data.project,
+			name: data.name,
+			configJson: data.configJson
+		});
+		console.log(`createContent: New ${collectionName} doc created with id: ${docSnap.id}`);
+		return docSnap;
+	} catch (err) {
+		console.error(`createContent ERROR: ${err}`);
+	}
+};
+export const cloneContent = async (collectionName, id) => {
+	// makes a copy and appends " [copy]" to the name
+	try {
+		const srcDocSnap = await readContent(collectionName, id);
+		const srcData = srcDocSnap.data();
+		const newDocSnap = await createContent(collectionName, {
+			project: srcData.project,
+			name: `${srcData.name} [copy]`,
+			configJson: srcData.configJson
+		});
+		return newDocSnap;
+	} catch (err) {
+		console.error(`cloneContent ERROR: ${err}`);
+	}
+};
+export const updateContent = async (collectionName, id, data) => {
+	// data = { name: 'something', configJson: 'stringifiedJson goes here' }
+	try {
+		const docSnap = await updateDoc(doc(db, collectionName, id), {
+			updatedAt: serverTimestamp(),
+			name: data.name,
+			configJson: data.configJson
+		});
+		console.log(`updateContent: doc ${docSnap.id} updated`);
+		return docSnap;
+	} catch (err) {
+		console.error(`updateContent ERROR: ${err}`);
+	}
+};
+export const deleteContent = async (collectionName, id) => {
+	try {
+		const docSnap = await deleteDoc(doc(db, collectionName, id));
+		console.log(`deleteContent: doc ${docSnap.id} deleted`);
+		return docSnap;
+	} catch (err) {
+		console.error(`deleteContent ERROR: ${err}`);
 	}
 };
 
-export const firebaseGetDocs = async (collectionName) => {
-	const querySnapshot = await getDocs(collection(db, collectionName));
-	console.log(`firebaseGetDocs:`);
-	querySnapshot.forEach((doc, d) => {
-		console.log(`#${d}: ${doc.id} => ${doc.data()}`);
-	});
-};
 
 
+///////////////////////////
+// QUERY & CRUD projects //
+///////////////////////////
 
-// PRJECTS //
-export const readProjects = async (limit = 100, offset = 0) => {
-	const querySnapshot = await getDocs(collection(db, 'projects'));
-	//console.log(`readProjects: ${JSON.stringify(querySnapshot, null, 2)}`);
-	const results = [];
-	querySnapshot.forEach((doc) => {
-		console.log(`${doc.id} => ${doc.data()}`);
-		results.push({
-			id: doc.id,
-			data: doc.data()
+export const queryProjects = async (limitNum = 100, offset = 0) => {
+	try {
+		const user = firebaseCurrentUser(true);
+		const q = query(collection(db, 'projects'), where('userId', '==', user.uid), orderBy('updatedAt', 'desc'), limit(limitNum));
+		const querySnap = await getDocs(q);
+		const results = [];
+		querySnap.forEach((docSnap) => {
+			console.log(`${docSnap.id} => ${JSON.stringify(docSnap.data(), null, 2)}`);
+			results.push({
+				id: docSnap.id,
+				data: docSnap.data()
+			});
 		});
-	});
-	return results;
+		return results;		
+	} catch (err) {
+		console.error(`queryProjects ERROR: ${err}`);
+	}
 };
 export const createProject = async (name) => {
+	// should additionally create "mySoundSet", "myGraph", and "myComposition" items
 	try {
 		const user = firebaseCurrentUser(true);
 		const docRef = await addDoc(collection(db, 'projects'), {
@@ -152,4 +255,24 @@ export const deleteProject = async (id) => {
 	} catch (err) {
 		console.error(`deleteProject ERROR: ${err}`);
 	}
+};
+
+
+
+////// TEMP //////
+export const firebaseAddDoc = async (collectionName, data) => {
+	try {
+		const docRef = await addDoc(collection(db, collectionName), data);
+		console.log(`firebaseAddDoc: Document written with id: ${docRef.id}`);
+	} catch (err) {
+		console.error(`firebaseAddDoc ERROR: ${err}`);
+	}
+};
+
+export const firebaseGetDocs = async (collectionName) => {
+	const querySnapshot = await getDocs(collection(db, collectionName));
+	console.log(`firebaseGetDocs:`);
+	querySnapshot.forEach((doc, d) => {
+		console.log(`#${d}: ${doc.id} => ${doc.data()}`);
+	});
 };

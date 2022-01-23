@@ -1,6 +1,6 @@
 <script>
 	import Oddio from '$lib/Oddio.js';
-	import { uiModulesData, audioContextData } from '../stores.js';
+	import { sModules, audioContextData } from '../stores.js';
 
 	export let text = "button";
 	export let color = "#123456";
@@ -30,8 +30,8 @@
 
 	const setModuleAppearance = (name, viz, bgColor) => {
 		visible = !!viz;
-		uiModulesData[name] = { visible, bgColor };
-		uiModulesData.set(uiModulesData);
+		sModules[name] = { visible, bgColor };
+		sModules.set(sModules);
 		console.log(`MagicButton.setModuleAppearance(${name}, ${visible}, ${bgColor})`);
 	};
 
@@ -43,6 +43,7 @@
 	visible && setModuleAppearance(moduleName, visible, color);
 </script>
 
+
 <button
 	style={cssVarStyles}
 	class:selected={visible}
@@ -50,6 +51,7 @@
 	on:click={toggleModule(moduleName)}>
 	{text}
 </button>
+
 
 <style>
 button.selected {
