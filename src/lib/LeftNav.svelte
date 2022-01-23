@@ -31,7 +31,7 @@
 <MagicButton text="Audio Graphs" disabled={noAccessYet} color="#dd9999" moduleName="graphs" visible={showGraphs}/>
 <MagicButton text="Compositions" disabled={noAccessYet} color="#66aa66" moduleName="compositions" visible={showCompositions}/>
 <hr/>
-<MagicButton text="Audio System" color="#88cccc" moduleName="AudioSystem" visible={showAudioSystem}/>
+<MagicButton text="Audio System" color="#88cccc" moduleName="audioSystem" visible={showAudioSystem}/>
 <MagicButton text="Waveforms" color="#ccaa88" moduleName="waveforms" visible={showWaveforms}/>
 
 <style>

@@ -1,6 +1,6 @@
 {
   "name": "oddio",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "scripts": {
     "dev": "svelte-kit dev --port 3210",
     "build": "svelte-kit build",
@@ -16,10 +16,10 @@
     "eslint-plugin-svelte3": "^3.2.0",
     "prettier": "~2.2.1",
     "prettier-plugin-svelte": "^2.2.0",
-    "svelte": "^3.34.0"
+    "svelte": "^3.46.2"
   },
   "type": "module",
   "dependencies": {
-    "firebase": "^9.2.0"
+    "firebase": "^9.6.4"
   }
 }
