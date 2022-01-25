@@ -1,16 +1,16 @@
 <script>
 	//import Visibility from '';
 	import { onMount, onDestroy } from 'svelte';
-	import { sModules, audioContextData } from '../stores.js';
+	import { sModules, sAudioContextInfo } from '../stores.js';
 	import Oddio from '$lib/Oddio.js';
 
 	let modules = {};
-	let ac = {};
+	let audioContextInfo = {};
 
 	sModules.subscribe(obj => modules = obj);
 	$: cssVarStyles = `--bgColor:${modules.audioSystem?.bgColor}`;
 
-	audioContextData.subscribe(obj => ac = obj);
+	sAudioContextInfo.subscribe(obj => audioContextInfo = obj);
 
 	let frame;
 	let mTime = {};
@@ -52,12 +52,12 @@
 <div
 	style={cssVarStyles}
 	class="content-module">
-	<b>Audio System</b><hr/>
+	<h2>&starf;&nbsp; Audio System &nbsp;&starf;</h2><hr/>
 	<button on:click={() => setPlayheadParams({ playheadTime: 0 })}>Reset Playhead to Zero</button><br/>
 	<button on:click={() => setPlayheadParams({ playheadSpeed: 1 })}>Play</button>
 	<button on:click={() => setPlayheadParams({ playheadSpeed: 0.1 })}>Slow</button>
 	<button on:click={() => setPlayheadParams({ playheadSpeed: 0 })}>Stop</button><br/>
-	<i>- State: {ac.state}</i><br/>
+	<i>- State: {audioContextInfo.state}</i><br/>
 	<i>- AudioContext Time: {mTime.currentTime}</i><br/>
 	<i>- Playhead Time: {mTime.now}</i>
 </div>
@@ -67,5 +67,11 @@
 		background:
 			linear-gradient(to top, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.5) 100%),
 			var(--bgColor);
+	}
+	h2 {
+		margin: 0 0 12px;
+	}
+	a {
+		cursor: pointer;
 	}
 </style>

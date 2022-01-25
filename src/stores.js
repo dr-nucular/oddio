@@ -21,7 +21,7 @@ export let sCompositions = writable([]);
 export let sCurComposition = writable(null);
 
 
-export let audioContextData = writable({
+export let sAudioContextInfo = writable({
 	state: undefined
 });
 

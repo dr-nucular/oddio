@@ -20,7 +20,7 @@
 <div
 	style={cssVarStyles}
 	class="content-module">
-	<b>{title}</b><hr/>
+	<h2>&starf;&nbsp; {title} &nbsp;&starf;</h2><hr/>
 	{#if isLoggedIn}
 		You are logged in with Google account {email}.<br/><br/>
 		<button on:click={firebaseLogout}>Log Out</button>	
@@ -35,5 +35,11 @@
 		background:
 			linear-gradient(to top, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.5) 100%),
 			var(--bgColor);
+	}
+	h2 {
+		margin: 0 0 12px;
+	}
+	a {
+		cursor: pointer;
 	}
 </style>

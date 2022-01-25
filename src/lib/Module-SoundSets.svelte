@@ -1,5 +1,5 @@
 <script>
-	import { queryContent } from '../firebase.js';
+	import { queryContent, cloneContent } from '../firebase.js';
 	import { sAuthInfo, sModules, sCurProject, sSoundSets, sCurSoundSet } from '../stores.js';
 
 	let isLoggedIn = false;
@@ -15,10 +15,6 @@
 	const requestSoundSets = async () => {
 		const data = await queryContent('soundSets', curProject?.id);
 		sSoundSets.set(data);
-		// for now, save first one to sCurSoundSet
-		if (data.length) {
-			sCurSoundSet.set(data[0]);
-		}
 	};
 
 
@@ -52,24 +48,34 @@
 		//getMyProjects();
 	};
 
+	const cloneSoundSet = async (soundSetId) => {
+		const data = await cloneContent("soundSets", soundSetId);
+		requestSoundSets();
+	};
+
 </script>
 
 <div
 	style={cssVarStyles}
 	class="content-module">
-	<b>Sound Sets</b><hr/>
+	<h2>&starf;&nbsp; Sound Sets &nbsp;&starf;</h2><hr/>
 	{#if isLoggedIn}
 		For Project: <b>{curProject?.data?.name}</b> [id: {curProject?.id}]
 		<br/><br/>
 
-		Current Sound Set: <b>{curSoundSet?.data?.name}</b> [id: {curSoundSet?.id}]
+		Active Sound Set: <b>{curSoundSet?.data?.name}</b> [id: {curSoundSet?.id}]
 		<br/><br/>
 
 		My Sound Sets:
 		<ol>
 			{#each soundSets as soundSet, ss}
 				<li>
-					<a href="setCurSoundSet_{soundSet.id}">{soundSet.data?.name}</a> [id: {soundSet.id}]
+					<b>{soundSet.data?.name}</b>
+					<small>[id: {soundSet.id}]</small>
+					&Pr; Activate
+					&squf; Edit
+					&squf; <a href={null} on:click={() => cloneSoundSet(soundSet.id)}>Clone</a>
+					&Sc;
 				</li>
 			{/each}
 		</ol>
@@ -83,5 +89,11 @@
 		background:
 			linear-gradient(to top, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.5) 100%),
 			var(--bgColor);
+	}
+	h2 {
+		margin: 0 0 12px;
+	}
+	a {
+		cursor: pointer;
 	}
 </style>

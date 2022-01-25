@@ -1,6 +1,6 @@
 <script>
 	import Oddio from '$lib/Oddio.js';
-	import { sModules, audioContextData } from '../stores.js';
+	import { sModules, sAudioContextInfo } from '../stores.js';
 
 	export let text = "button";
 	export let color = "#123456";
@@ -19,8 +19,8 @@
 			return Oddio.init().then(() => {
 				const acState = Oddio.getAC()?.state;
 				console.log(`MagicButton.initAC(): Initialized audio subsystem, state: ${acState}`);
-				audioContextData.state = acState;
-				audioContextData.set(audioContextData);
+				sAudioContextInfo.state = acState;
+				sAudioContextInfo.set(sAudioContextInfo);
 			}).catch(() => {
 				console.log(`MagicButton.initAC(): Failed to initialize audio subsystem`);
 			});

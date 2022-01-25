@@ -15,10 +15,6 @@
 	const requestCompositions = async () => {
 		const data = await queryContent('compositions', curProject?.id);
 		sCompositions.set(data);
-		// for now, save first one to sCurComposition
-		if (data.length) {
-			sCurComposition.set(data[0]);
-		}
 	};
 
 
@@ -52,24 +48,34 @@
 		//getMyProjects();
 	};
 
+	const cloneComposition = async (compositionId) => {
+		const data = await cloneContent("compositions", compostitionId);
+		requestCompositions();
+	};
+
 </script>
 
 <div
 	style={cssVarStyles}
 	class="content-module">
-	<b>Compositions</b><hr/>
+	<h2>&starf;&nbsp; Compositions &nbsp;&starf;</h2><hr/>
 	{#if isLoggedIn}
 		For Project: <b>{curProject?.data?.name}</b> [id: {curProject?.id}]
 		<br/><br/>
 
-		Current Composition: <b>{curComposition?.data?.name}</b> [id: {curComposition?.id}]
+		Active Composition: <b>{curComposition?.data?.name}</b> [id: {curComposition?.id}]
 		<br/><br/>
 
 		My Compositions:
 		<ol>
 			{#each compositions as composition, ss}
 				<li>
-					<a href="setCurComposition_{composition.id}">{composition.data?.name}</a> [id: {composition.id}]
+					<b>{composition.data?.name}</b>
+					<small>[id: {composition.id}]</small>
+					&Pr; Activate
+					&squf; Edit
+					&squf; <a href={null} on:click={() => cloneComposition(composition.id)}>Clone</a>
+					&Sc;
 				</li>
 			{/each}
 		</ol>
@@ -83,5 +89,11 @@
 		background:
 			linear-gradient(to top, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.5) 100%),
 			var(--bgColor);
+	}
+	h2 {
+		margin: 0 0 12px;
+	}
+	a {
+		cursor: pointer;
 	}
 </style>

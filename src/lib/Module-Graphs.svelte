@@ -15,10 +15,6 @@
 	const requestGraphs = async () => {
 		const data = await queryContent('graphs', curProject?.id);
 		sGraphs.set(data);
-		// for now, save first one to sCurGraph
-		if (data.length) {
-			sCurGraph.set(data[0]);
-		}
 	};
 
 
@@ -52,24 +48,34 @@
 		//getMyProjects();
 	};
 
+	const cloneGraph = async (graphId) => {
+		const data = await cloneContent("graphs", graphId);
+		requestGraphs();
+	};
+
 </script>
 
 <div
 	style={cssVarStyles}
 	class="content-module">
-	<b>Audio Graphs</b><hr/>
+	<h2>&starf;&nbsp; Audio Graphs &nbsp;&starf;</h2><hr/>
 	{#if isLoggedIn}
 		For Project: <b>{curProject?.data?.name}</b> [id: {curProject?.id}]
 		<br/><br/>
 
-		Current Graph: <b>{curGraph?.data?.name}</b> [id: {curGraph?.id}]
+		Active Graph: <b>{curGraph?.data?.name}</b> [id: {curGraph?.id}]
 		<br/><br/>
 
 		My Graphs:
 		<ol>
 			{#each graphs as graph, ss}
 				<li>
-					<a href="setCurGraph_{graph.id}">{graph.data?.name}</a> [id: {graph.id}]
+					<b>{graph.data?.name}</b>
+					<small>[id: {graph.id}]</small>
+					&Pr; Activate
+					&squf; Edit
+					&squf; <a href={null} on:click={() => cloneGraph(graph.id)}>Clone</a>
+					&Sc;
 				</li>
 			{/each}
 		</ol>
@@ -83,5 +89,11 @@
 		background:
 			linear-gradient(to top, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.5) 100%),
 			var(--bgColor);
+	}
+	h2 {
+		margin: 0 0 12px;
+	}
+	a {
+		cursor: pointer;
 	}
 </style>

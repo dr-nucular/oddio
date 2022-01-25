@@ -103,7 +103,7 @@ export const queryContent = async (collectionName, projectId, limitNum = 100, of
 		const q = query(
 			collection(db, collectionName),
 			//where('userId', '==', user.uid),
-			//where('project', '==', projectDocRef),
+			where('project', '==', projectDocRef),
 			orderBy('updatedAt', 'desc'),
 			limit(limitNum)
 		);
@@ -159,7 +159,7 @@ export const cloneContent = async (collectionName, id) => {
 	// makes a copy and appends " [copy]" to the name
 	try {
 		const srcDocSnap = await readContent(collectionName, id);
-		const srcData = srcDocSnap.data();
+		const srcData = srcDocSnap.data;
 		const newDocSnap = await createContent(collectionName, {
 			project: srcData.project,
 			name: `${srcData.name} [copy]`,
