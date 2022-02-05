@@ -2,9 +2,7 @@
 	import { sModules } from '../stores.js';
 	import AuthModule from '$lib/Module-Auth.svelte';
 	import ProjectsModule from '$lib/Module-Projects.svelte';
-	import SoundSetsModule from '$lib/Module-SoundSets.svelte';
-	import GraphsModule from '$lib/Module-Graphs.svelte';
-	import CompositionsModule from '$lib/Module-Compositions.svelte';
+	import ProjDocsModule from '$lib/Module-ProjDocs.svelte';
 	import AudioSystemModule from '$lib/Module-AudioSystem.svelte';
 	import WaveformsModule from '$lib/Module-Waveforms.svelte';
 
@@ -23,15 +21,15 @@
 {/if}
 
 {#if modules.soundSets?.visible}
-	<SoundSetsModule/>
+	<ProjDocsModule collectionStr="soundSets" />
 {/if}
 
 {#if modules.graphs?.visible}
-	<GraphsModule/>
+	<ProjDocsModule collectionStr="graphs" />
 {/if}
 
 {#if modules.compositions?.visible}
-	<CompositionsModule/>
+	<ProjDocsModule collectionStr="compositions" />
 {/if}
 
 {#if modules.audioSystem?.visible}

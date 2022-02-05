@@ -1,14 +1,18 @@
 <script>
 	import { queryProjects, readContent, createProject } from '../firebase.js';
-	import { sAuthInfo, sModules, sProjects, sCurProject, sCurSoundSet, sCurGraph, sCurComposition } from '../stores.js';
+	import { sAuthInfo, sModules, sProjects, sCurProject, sProjDocProps, sActiveProjDocs } from '../stores.js';
 
 	let isLoggedIn = false;
 	let modules = {};
 	let projects = [];
 	let curProject = null;
-	let curSoundSet = null;
-	let curGraph = null;
-	let curComposition = null;
+
+	//let curSoundSet = null;
+	//let curGraph = null;
+	//let curComposition = null;
+
+	let projDocProps = null;
+	let projCurDocs = {};
 
 	const shouldRequestProjects = () => {
 		return !!(isLoggedIn & !projects.length);
@@ -30,30 +34,43 @@
 	sModules.subscribe(obj => modules = obj);
 	$: cssVarStyles = `--bgColor:${modules.projects?.bgColor}`;
 
+	sProjDocProps.subscribe(collections => projDocProps = collections);
+
 	sProjects.subscribe(objs => projects = objs);
 	sCurProject.subscribe(async obj => {
 		curProject = obj;
 		if (curProject) {
 			const curSoundSetId = curProject.data?.soundSet?.id || null;
 			if (curSoundSetId) {
-				curSoundSet = await readContent('soundSets', curSoundSetId);
-				sCurSoundSet.set(curSoundSet);				
+				projCurDocs.soundSets = await readContent('soundSets', curSoundSetId);
+				//sCurSoundSet.set(curSoundSet);				
+			} else {
+				projCurDocs.soundSets = null;
 			}
+
 			const curGraphId = curProject.data?.graph?.id || null;
 			if (curGraphId) {
-				curGraph = await readContent('graphs', curGraphId);
-				sCurGraph.set(curGraph);				
+				projCurDocs.graphs = await readContent('graphs', curGraphId);
+				//sCurGraph.set(curGraph);				
+			} else {
+				projCurDocs.graphs = null;
 			}
+
 			const curCompositionId = curProject.data?.composition?.id || null;
 			if (curCompositionId) {
-				curComposition = await readContent('compositions', curCompositionId);
-				sCurComposition.set(curComposition);				
+				projCurDocs.compositions = await readContent('compositions', curCompositionId);
+				//sCurComposition.set(curComposition);				
+			} else {
+				projCurDocs.compositions = null;
 			}
+
+			sActiveProjDocs.set(projCurDocs);
 		}
 	});
-	sCurSoundSet.subscribe(obj => curSoundSet = obj);
-	sCurGraph.subscribe(obj => curGraph = obj);
-	sCurComposition.subscribe(obj => curComposition = obj);
+	//sCurSoundSet.subscribe(obj => curSoundSet = obj);
+	//sCurGraph.subscribe(obj => curGraph = obj);
+	//sCurComposition.subscribe(obj => curComposition = obj);
+	sActiveProjDocs.subscribe(collections => projCurDocs = collections);
 
 	if (shouldRequestProjects()) {
 		requestProjects();
@@ -78,17 +95,21 @@
 	class="content-module">
 	<h2>&starf;&nbsp; Projects &nbsp;&starf;</h2><hr/>
 	{#if isLoggedIn}
-		Current project: <b>{curProject?.data?.name}</b> [id: {curProject?.id}]<br/>
-		- Current soundSet: <b>{curSoundSet?.data?.name}</b> [id: {curSoundSet?.id}]<br/>
-		- Current graph: <b>{curGraph?.data?.name}</b> [id: {curGraph?.id}]<br/>
-		- Current composition: <b>{curComposition?.data?.name}</b> [id: {curComposition?.id}]<br/>
+		Current Project: <b>{curProject?.data?.name}</b> [id: {curProject?.id}]<br/>
+		- Active Sound Set: <b>{projCurDocs?.soundSets?.data?.name}</b> [id: {projCurDocs?.soundSets?.id}]<br/>
+		- Active Audio Graph: <b>{projCurDocs?.graphs?.data?.name}</b> [id: {projCurDocs?.graphs?.id}]<br/>
+		- Active Composition: <b>{projCurDocs?.compositions?.data?.name}</b> [id: {projCurDocs?.compositions?.id}]<br/>
 		<br/>
 
-		My projects:
+		My Projects:
 		<ol>
 			{#each projects as project, p}
 				<li>
-					<a href="setCurProject_{project.id}">{project.data?.name}</a> [id: {project.id}]
+					<b>{project.data?.name}</b>
+					<small>[id: {project.id}]</small>
+					&Pr; Load
+					&squf; Clone
+					&Sc;
 				</li>
 			{/each}
 		</ol>

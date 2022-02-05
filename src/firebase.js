@@ -110,12 +110,13 @@ export const queryContent = async (collectionName, projectId, limitNum = 100, of
 		const querySnap = await getDocs(q);
 		const results = [];
 		querySnap.forEach((docSnap) => {
-			console.log(`${docSnap.id} => ${JSON.stringify(docSnap.data(), null, 2)}`);
+			//console.log(`${docSnap.id} => ${JSON.stringify(docSnap.data(), null, 2)}`);
 			results.push({
 				id: docSnap.id,
 				data: docSnap.data()
 			});
 		});
+		console.log(`queryContent ${collectionName}: ${results.length} documents =>`, results);
 		return results;		
 	} catch (err) {
 		console.error(`queryContent ERROR: ${err}`);
@@ -137,7 +138,7 @@ export const readContent = async (collectionName, id) => {
 	}
 };
 export const createContent = async (collectionName, data) => {
-	// data = { project: 'projectRef/here', name: 'something', configJson: 'stringifiedJson goes here' }
+	// data = { project: 'projectRef/goeshere', name: 'something', configJson: 'stringifiedJson goes here' }
 	try {
 		const user = firebaseCurrentUser(true);
 		const ts = serverTimestamp();
@@ -165,6 +166,7 @@ export const cloneContent = async (collectionName, id) => {
 			name: `${srcData.name} [copy]`,
 			configJson: srcData.configJson
 		});
+		console.log(`cloneContent: New ${collectionName} doc ${newDocSnap.id} cloned from id: ${id}`);
 		return newDocSnap;
 	} catch (err) {
 		console.error(`cloneContent ERROR: ${err}`);
@@ -173,22 +175,24 @@ export const cloneContent = async (collectionName, id) => {
 export const updateContent = async (collectionName, id, data) => {
 	// data = { name: 'something', configJson: 'stringifiedJson goes here' }
 	try {
-		const docSnap = await updateDoc(doc(db, collectionName, id), {
+		const docRef = doc(db, collectionName, id);
+		await updateDoc(docRef, {
 			updatedAt: serverTimestamp(),
 			name: data.name,
 			configJson: data.configJson
 		});
-		console.log(`updateContent: doc ${docSnap.id} updated`);
-		return docSnap;
+		console.log(`updateContent: doc id ${id} updated`);
+		return;
 	} catch (err) {
 		console.error(`updateContent ERROR: ${err}`);
 	}
 };
 export const deleteContent = async (collectionName, id) => {
 	try {
-		const docSnap = await deleteDoc(doc(db, collectionName, id));
-		console.log(`deleteContent: doc ${docSnap.id} deleted`);
-		return docSnap;
+		const docRef = doc(db, collectionName, id);
+		await deleteDoc(docRef);
+		console.log(`deleteContent: doc id ${id} deleted`);
+		return;
 	} catch (err) {
 		console.error(`deleteContent ERROR: ${err}`);
 	}
@@ -207,54 +211,81 @@ export const queryProjects = async (limitNum = 100, offset = 0) => {
 		const querySnap = await getDocs(q);
 		const results = [];
 		querySnap.forEach((docSnap) => {
-			console.log(`${docSnap.id} => ${JSON.stringify(docSnap.data(), null, 2)}`);
+			//console.log(`${docSnap.id} => ${JSON.stringify(docSnap.data(), null, 2)}`);
 			results.push({
 				id: docSnap.id,
 				data: docSnap.data()
 			});
 		});
+		console.log(`queryProjects ${results.length} documents =>`, results);
 		return results;		
 	} catch (err) {
 		console.error(`queryProjects ERROR: ${err}`);
 	}
 };
-export const createProject = async (name) => {
-	// should additionally create "mySoundSet", "myGraph", and "myComposition" items
+export const readProject = async (id) => {
 	try {
-		const user = firebaseCurrentUser(true);
-		const docRef = await addDoc(collection(db, 'projects'), {
-			userId: user.uid,
-			createdAt: serverTimestamp(),
-			name,
-		});
-		console.log(`createProject: New project created with id: ${docRef.id}`);
-		return docRef;
+		const docRef = doc(db, 'projects', id);
+		const docSnap = await getDoc(docRef);
+		if (docSnap.exists()) {
+			console.log(`readProject (id: ${id}):`, docSnap.data());
+			return { id: docSnap.id, data: docSnap.data() };
+		} else {
+			// doc.data() will be undefined in this case
+			throw `No such project with id: ${id}!`;
+		}
 	} catch (err) {
-		console.error(`createProject ERROR: ${err}`);
+		console.error(`readProject ERROR: ${err}`);
 	}
 };
+export const createProject = async (name) => {
+					// should additionally create "mySoundSet", "myGraph", and "myComposition" items
+					try {
+						const user = firebaseCurrentUser(true);
+						const docRef = await addDoc(collection(db, 'projects'), {
+							userId: user.uid,
+							createdAt: serverTimestamp(),
+							name,
+						});
+						console.log(`createProject: New project created with id: ${docRef.id}`);
+						return docRef;
+					} catch (err) {
+						console.error(`createProject ERROR: ${err}`);
+					}
+};
 export const updateProject = async (id, data) => {
+	// possible data fields are:
+	// data = { name: 'string', soundSet: 'soundSets/idGoesHere', graph: 'graphs/idGoesHere', composition: 'compositions/idGoesHere' }
+	// set whatever fields you want to update
 	try {
-		//const user = firebaseCurrentUser(true);
-		const docRef = await updateDoc(id, {
-			updatedAt: serverTimestamp(),
-			data,
-		});
-		console.log(`updateProject: project ${docRef.id} updated`);
-		return docRef;
+		const docRef = doc(db, 'projects', id);
+		data.updatedAt = serverTimestamp(); // set updatedAt
+		// convert reference strings, i.e. "collectionName/idString", into docRefs
+		if (data.soundSet) {
+			data.soundSet = doc(db, data.soundSet);
+		}
+		if (data.graph) {
+			data.graph = doc(db, data.graph);
+		}
+		if (data.composition) {
+			data.composition = doc(db, data.composition);
+		}
+		await updateDoc(docRef, data);
+		console.log(`updateProject: project id ${id} updated`);
+		return;
 	} catch (err) {
 		console.error(`updateProject ERROR: ${err}`);
 	}
 };
 export const deleteProject = async (id) => {
-	try {
-		//const user = firebaseCurrentUser(true);
-		const docRef = await deleteDoc(id);
-		console.log(`deleteProject: project ${docRef.id} updated`);
-		return docRef;
-	} catch (err) {
-		console.error(`deleteProject ERROR: ${err}`);
-	}
+					try {
+						//const user = firebaseCurrentUser(true);
+						const docRef = await deleteDoc(id);
+						console.log(`deleteProject: project ${docRef.id} updated`);
+						return docRef;
+					} catch (err) {
+						console.error(`deleteProject ERROR: ${err}`);
+					}
 };
 
 

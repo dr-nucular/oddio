@@ -11,15 +11,34 @@ export let sModules = writable({});
 export let sProjects = writable([]);
 export let sCurProject = writable(null);
 
-export let sSoundSets = writable([]);
-export let sCurSoundSet = writable(null);
+export let sProjDocs = writable({
+	soundSets: [],
+	graphs: [],
+	compositions: []
+});
+export let sActiveProjDocs = writable({
+	soundSets: null,
+	graphs: null,
+	compositions: null
+});
 
-export let sGraphs = writable([]);
-export let sCurGraph = writable(null);
-
-export let sCompositions = writable([]);
-export let sCurComposition = writable(null);
-
+export let sProjDocProps = writable({ // readable?
+	soundSets: {
+		projRefField: "soundSet",
+		singular: "Sound Set",
+		plural: "Sound Sets"
+	},
+	graphs: {
+		projRefField: "graph",
+		singular: "Audio Graph",
+		plural: "Audio Graphs"
+	},
+	compositions: {
+		projRefField: "composition",
+		singular: "Composition",
+		plural: "Compositions"
+	}
+});
 
 export let sAudioContextInfo = writable({
 	state: undefined
