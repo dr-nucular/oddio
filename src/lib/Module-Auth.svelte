@@ -1,4 +1,5 @@
 <script>
+	import { onDestroy } from 'svelte';
 	import { firebaseLogin, firebaseLogout } from '../firebase.js';
 	import { sModules, sAuthInfo } from '../stores.js';
 
@@ -7,14 +8,19 @@
 	let title = 'Log In';
 	let email = null;
 
-	sAuthInfo.subscribe(obj => {
+	const unsubAuthInfo = sAuthInfo.subscribe(obj => {
 		isLoggedIn = obj.isLoggedIn;
 		title = isLoggedIn ? "Log Out" : "Log In";
 		email = obj.username;
 	});
 	
-	sModules.subscribe(obj => modules = obj);
+	const unsubModules = sModules.subscribe(obj => modules = obj);
 	$: cssVarStyles = `--bgColor:${modules.auth?.bgColor}`;
+
+	onDestroy(() => {
+		unsubAuthInfo();
+		unsubModules();
+	});
 </script>
 
 <div
@@ -38,8 +44,5 @@
 	}
 	h2 {
 		margin: 0 0 12px;
-	}
-	a {
-		cursor: pointer;
 	}
 </style>

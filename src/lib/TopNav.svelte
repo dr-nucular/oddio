@@ -1,13 +1,18 @@
 <script>
+	import { onDestroy } from 'svelte';
 	import MagicButton from './MagicButton.svelte';
 	import { sAuthInfo, sCurProject } from '../stores.js';
 
+	// exported attributes
 	export let showAuth = false;
-	let curProjectTitle = "";
+
+	// subscription vars
+	let curProject = null;
 	let authButtonText = "";
 	let authButtonDisabled = false;
 
-	sAuthInfo.subscribe(obj => {
+	// subscriptions
+	const unsubAuthInfo = sAuthInfo.subscribe(obj => {
 		authButtonDisabled = obj.isBusy;
 		if (authButtonDisabled) {
 			authButtonText = "Checking...";
@@ -15,13 +20,17 @@
 			authButtonText = obj.isLoggedIn ? "Log Out" : "Log In";
 		}
 	});
+	const unsubCurProject = sCurProject.subscribe(obj => curProject = obj);
 
-	sCurProject.subscribe(obj => curProjectTitle = obj?.data?.name || "");
+	onDestroy(() => {
+		unsubAuthInfo();
+		unsubCurProject();
+	});
 
 </script>
 
 <div class="nobr">
-	<span class="projectTitle">{curProjectTitle}</span>
+	<span class="projectTitle">{curProject?.data().name || ""}</span>
 	<div class="magic">
 		&nbsp;&nbsp;&nbsp;&nbsp;
 		<MagicButton text={authButtonText} disabled={authButtonDisabled} color="#ff6600" moduleName="auth" visible={showAuth}/>
@@ -33,14 +42,12 @@
 	.nobr {
 		white-space: nowrap;
 	}
-
 	.projectTitle {
 		color: #ccc;
 		font: italic 400 40px/35px Ubuntu;
 		white-space: normal;
 		//overflow: hidden;
 	}
-
 	.magic {
 		float: right;
 	}

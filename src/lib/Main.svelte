@@ -1,4 +1,5 @@
 <script>
+	import { onDestroy } from 'svelte';
 	import { sModules } from '../stores.js';
 	import AuthModule from '$lib/Module-Auth.svelte';
 	import ProjectsModule from '$lib/Module-Projects.svelte';
@@ -8,7 +9,11 @@
 
 	let modules = {};
 
-	sModules.subscribe(obj => modules = obj);
+	const unsubModules = sModules.subscribe(obj => modules = obj);
+
+	onDestroy(() => {
+		unsubModules();
+	});
 </script>
 
 

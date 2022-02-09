@@ -1,7 +1,9 @@
 <script>
+	import { onDestroy } from 'svelte';
 	import MagicButton from './MagicButton.svelte';
 	import { sAuthInfo, sCurProject } from '../stores.js';
 
+	// exported attributes
 	export let showProjects = false;
 	export let showSoundSets = false;
 	export let showGraphs = false;
@@ -9,18 +11,24 @@
 	export let showAudioSystem = false;
 	export let showWaveforms = false;
 
+	// subscription vars
 	let notLoggedIn = true;
 	let noCurProject = true;
 	let noAccessYet = true;
 
-	sAuthInfo.subscribe(obj => {
+	// subscriptions
+	const unsubAuthInfo = sAuthInfo.subscribe(obj => {
 		notLoggedIn = !obj.isLoggedIn;
 		noAccessYet = notLoggedIn || noCurProject;
 	});
-
-	sCurProject.subscribe(obj => {
+	const unsubCurProject = sCurProject.subscribe(obj => {
 		noCurProject = obj === null;
 		noAccessYet = notLoggedIn || noCurProject;
+	});
+
+	onDestroy(() => {
+		unsubAuthInfo();
+		unsubCurProject();
 	});
 
 </script>

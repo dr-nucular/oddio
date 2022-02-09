@@ -1,21 +1,29 @@
 <script>
-	import { queryContent, cloneContent, readProject, readContent, updateProject, updateContent } from '../firebase.js';
-	import { sAuthInfo, sModules, sCurProject, sProjDocs, sProjDocProps, sActiveProjDocs } from '../stores.js';
+	import { onDestroy } from 'svelte';
+	import {
+		readProject, updateProject,
+		queryContent, cloneContent, readContent, updateContent, deleteContent
+	} from '../firebase.js';
+	import { sAuthInfo, sModules, sCurProject, sProjDocs, sActiveProjDocs, gProjDocProps } from '../stores.js';
 
+	// exported attributes
 	export let collectionStr = "";
 
-	let isLoggedIn = false;
+	// subscription vars
+	let authInfo = {};
 	let modules = {};
 	let curProject = null;
-	let projDocProps = null; // i.e. { projRefField: "soundSet", singular: "Sound Set", plural: "Sound Sets" }
-	let documents = [];
-	let curDocument = null;
+	let projDocs = []; // just those of type collectionStr
+	let activeProjDoc = null; // just that of type collectionStr
 
-	let editingDocument = null;
-	let editSubmitButton;
+	// other states
+	let editingDocId;
+	let editingDocData;
+	let docSaveButton;
+	let docDeleteButton;
 
 	const shouldRequestDocuments = () => {
-		return !!(isLoggedIn && curProject !== null && !documents.length);
+		return !!(authInfo.isLoggedIn && curProject !== null && !projDocs.length);
 	};
 
 	const requestDocuments = async () => {
@@ -27,21 +35,21 @@
 	};
 
 
-
-	sAuthInfo.subscribe(obj => isLoggedIn = obj.isLoggedIn);
-
-	sModules.subscribe(obj => modules = obj);
+	// store subscriptions
+	const unsubAuthInfo = sAuthInfo.subscribe(obj => authInfo = obj);
+	const unsubModules = sModules.subscribe(obj => modules = obj);
 	$: cssVarStyles = `--bgColor:${modules[collectionStr]?.bgColor}`;
-
-	sProjDocProps.subscribe(collections => projDocProps = collections[collectionStr]);
-	sProjDocs.subscribe(collections => documents = collections[collectionStr]);
-	sActiveProjDocs.subscribe(collections => curDocument = collections[collectionStr]);
-	sCurProject.subscribe(obj => {
+	const unsubProjDocs = sProjDocs.subscribe(collections => projDocs = collections[collectionStr]);
+	const unsubActiveProjDocs = sActiveProjDocs.subscribe(collections => activeProjDoc = collections[collectionStr]);
+	const unsubCurProject = sCurProject.subscribe(obj => {
 		curProject = obj;
 		//if (shouldRequestDocuments()) {
 			requestDocuments();
 		//}
 	});
+
+
+
 
 	/*
 	if (shouldRequestDocuments()) {
@@ -51,7 +59,7 @@
 
 	const activateDocument = async (documentId) => {
 		const data = {};
-		data[projDocProps.projRefField] = `/${collectionStr}/${documentId}`;
+		data[gProjDocProps[collectionStr]?.projRefField] = `/${collectionStr}/${documentId}`;
 		await updateProject(curProject.id, data);
 		
 		// update sCurProject in store
@@ -60,10 +68,20 @@
 	};
 
 	const editDocument = (documentId) => {
-		editingDocument = documents.find(item => item.id === documentId);
+		const editingDoc = projDocs.find(item => item.id === documentId);
+		editingDocId = editingDoc.id;
+		editingDocData = editingDoc.data();
 	};
 	const closeDocEditor = () => {
-		editingDocument = null;
+		editingDocId = undefined;
+		editingDocData = undefined;
+	};
+	const saveOrDeleteDocument = async (event) => {
+		if (event.submitter === docSaveButton) {
+			await saveDocument();
+		} else {
+			await deleteDocument();
+		}
 	};
 	const saveDocument = async () => {
 		try {
@@ -86,15 +104,16 @@
 			const configJsonParsed = JSON.parse(docConfigJson.value); // will throw exception if can't be parsed
 			//const configJson = JSON.stringify(configJsonParsed, null, 2); // make a button for tidying json?
 			const configJson = docConfigJson.value;
-			editSubmitButton.disabled = true;
 
+			docSaveButton.innerText = "Saving...";
+			docSaveButton.disabled = true;
 			await updateContent(collectionStr, docId.value, { name, configJson });
 			closeDocEditor();
 			requestDocuments();
 
 			// if this edited item is also the active one, then we need to update that data in the store
 			const updatedContent = await readContent(collectionStr, docId.value);
-			if (curDocument.id === updatedContent.id) {
+			if (activeProjDoc.id === updatedContent.id) {
 				sActiveProjDocs.update(collections => {
 					collections[collectionStr] = updatedContent;
 					return collections;
@@ -104,30 +123,55 @@
 			console.error(`saveDocument ERROR: ${err}`);
 		}
 	};
+	const deleteDocument = async () => {
+		try {
+			if (!docId?.value) {
+				throw `docId not present`;
+			}
+			if (docDeleteButton.innerText !== "Delete 4 Realz?") {
+				docDeleteButton.innerText = "Delete 4 Realz?";
+			} else {
+				docDeleteButton.innerText = "Deleting...";
+				docDeleteButton.disabled = true;
+				await deleteContent(collectionStr, docId.value);
+				closeDocEditor();
+				requestDocuments();
+			}
+		} catch (err) {
+			console.error(`deleteDocument ERROR: ${err}`);
+		}
+	};
 
 	const cloneDocument = async (documentId) => {
 		await cloneContent(collectionStr, documentId);
 		requestDocuments();
 	};
 
+	onDestroy(() => {
+		unsubAuthInfo();
+		unsubModules();
+		unsubProjDocs();
+		unsubActiveProjDocs();
+		unsubCurProject();
+	});
+
 </script>
 
 <div
 	style={cssVarStyles}
 	class="content-module">
-	<h2>&starf;&nbsp; {projDocProps?.plural} &nbsp;&starf;</h2><hr/>
-	{#if isLoggedIn}
-		For Project: <b>{curProject?.data?.name}</b> [id: {curProject?.id}]
-		<br/><br/>
+	<h2>&starf;&nbsp; {gProjDocProps[collectionStr]?.plural} &nbsp;&starf;</h2><hr/>
+	{#if authInfo.isLoggedIn}
+		Active Project: <b>{curProject?.data().name}</b> using:
+		<ul>
+			<li>{gProjDocProps[collectionStr]?.singular}: <b>{activeProjDoc?.data().name}</b></li>
+		</ul>
 
-		Active {projDocProps?.singular}: <b>{curDocument?.data?.name}</b> [id: {curDocument?.id}]
-		<br/><br/>
-
-		My {projDocProps?.plural}:
+		All {gProjDocProps[collectionStr]?.plural}:
 		<ol>
-			{#each documents as document, ss}
+			{#each projDocs as document}
 				<li>
-					<b>{document.data?.name}</b>
+					<b>{document.data().name}</b>
 					<small>[id: {document.id}]</small>
 					&Pr; <a href={null} on:click={activateDocument(document.id)}>Activate</a>
 					&squf; <a href={null} on:click={editDocument(document.id)}>Edit</a>
@@ -137,16 +181,19 @@
 			{/each}
 		</ol>
 
-		{#if editingDocument}
-			<form on:submit|preventDefault={saveDocument}>
-				<input id="docId" type="text" bind:value={editingDocument.id} />
+		{#if editingDocId}
+			<form on:submit|preventDefault={saveOrDeleteDocument}>
+				<input id="docId" type="text" bind:value={editingDocId} />
 				<label for="docName">Name:</label>
-				<input id="docName" type="text" bind:value={editingDocument.data.name} /><br/>
+				<input id="docName" type="text" bind:value={editingDocData.name} /><br/>
 				<label for="docConfigJson">JSON:</label>
-				<textarea id="docConfigJson" bind:value={editingDocument.data.configJson} /><br/>
-				<button id="docSubmitButton" type="submit" bind:this={editSubmitButton}>Save</button>
+				<textarea id="docConfigJson" bind:value={editingDocData.configJson} /><br/>
+				<button id="docSaveButton" type="submit" bind:this={docSaveButton}>Save</button>
 				&nbsp;
-				<a href={null} on:click={closeDocEditor}>Cancel</a>
+				<a href={null} on:click={closeDocEditor}>Abort Editing</a>
+				{#if activeProjDoc.id !== editingDocId}
+					<button id="docDeleteButton" type="submit" bind:this={docDeleteButton}>Delete</button>
+				{/if}
 			</form>
 		{/if}
 	{/if}
@@ -164,9 +211,6 @@
 	a {
 		cursor: pointer;
 	}
-	#docId {
-		display: none;
-	}
 	input {
 		width: 100%;
 	}
@@ -174,4 +218,16 @@
 		width: 100%;
 		height: 100px;
 	}
+	#docId {
+		display: none;
+	}
+	#docDeleteButton {
+		float: right;
+		color: red;
+	}
+	#docDeleteButton:disabled {
+		color: #999;
+		pointer-events: none;
+	}
+
 </style>

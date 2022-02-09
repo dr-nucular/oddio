@@ -22,7 +22,8 @@ export let sActiveProjDocs = writable({
 	compositions: null
 });
 
-export let sProjDocProps = writable({ // readable?
+// this is just an obj, not a writable store
+export const gProjDocProps = {
 	soundSets: {
 		projRefField: "soundSet",
 		singular: "Sound Set",
@@ -38,7 +39,7 @@ export let sProjDocProps = writable({ // readable?
 		singular: "Composition",
 		plural: "Compositions"
 	}
-});
+};
 
 export let sAudioContextInfo = writable({
 	state: undefined

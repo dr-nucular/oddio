@@ -111,13 +111,16 @@ export const queryContent = async (collectionName, projectId, limitNum = 100, of
 		const results = [];
 		querySnap.forEach((docSnap) => {
 			//console.log(`${docSnap.id} => ${JSON.stringify(docSnap.data(), null, 2)}`);
+			results.push(docSnap);
+			/*
 			results.push({
 				id: docSnap.id,
 				data: docSnap.data()
 			});
+			*/
 		});
-		console.log(`queryContent ${collectionName}: ${results.length} documents =>`, results);
-		return results;		
+		console.log(`queryContent ${collectionName}: ${results.length} documents`);
+		return results;
 	} catch (err) {
 		console.error(`queryContent ERROR: ${err}`);
 	}
@@ -128,7 +131,8 @@ export const readContent = async (collectionName, id) => {
 		const docSnap = await getDoc(docRef);
 		if (docSnap.exists()) {
 			console.log(`readContent (id: ${id}):`, docSnap.data());
-			return { id: docSnap.id, data: docSnap.data() };
+			return docSnap;
+			//return { id: docSnap.id, data: docSnap.data() };
 		} else {
 			// doc.data() will be undefined in this case
 			throw `No such document with id: ${id}!`;
@@ -156,14 +160,15 @@ export const createContent = async (collectionName, data) => {
 		console.error(`createContent ERROR: ${err}`);
 	}
 };
-export const cloneContent = async (collectionName, id) => {
-	// makes a copy and appends " [copy]" to the name
+export const cloneContent = async (collectionName, id, newProjectRef) => {
+	// if newProjectRef, makes a copy and sets project to newProjectRef.
+	// if no newProjectRef, makes a copy and appends " [copy]" to the name.
 	try {
 		const srcDocSnap = await readContent(collectionName, id);
-		const srcData = srcDocSnap.data;
+		const srcData = srcDocSnap.data();
 		const newDocSnap = await createContent(collectionName, {
-			project: srcData.project,
-			name: `${srcData.name} [copy]`,
+			project: newProjectRef ? newProjectRef : srcData.project,
+			name: newProjectRef ? srcData.name : `${srcData.name} [copy]`,
 			configJson: srcData.configJson
 		});
 		console.log(`cloneContent: New ${collectionName} doc ${newDocSnap.id} cloned from id: ${id}`);
@@ -212,13 +217,16 @@ export const queryProjects = async (limitNum = 100, offset = 0) => {
 		const results = [];
 		querySnap.forEach((docSnap) => {
 			//console.log(`${docSnap.id} => ${JSON.stringify(docSnap.data(), null, 2)}`);
+			results.push(docSnap);
+			/*
 			results.push({
 				id: docSnap.id,
 				data: docSnap.data()
 			});
+			*/
 		});
-		console.log(`queryProjects ${results.length} documents =>`, results);
-		return results;		
+		console.log(`queryProjects: ${results.length} documents`);
+		return results;
 	} catch (err) {
 		console.error(`queryProjects ERROR: ${err}`);
 	}
@@ -229,7 +237,8 @@ export const readProject = async (id) => {
 		const docSnap = await getDoc(docRef);
 		if (docSnap.exists()) {
 			console.log(`readProject (id: ${id}):`, docSnap.data());
-			return { id: docSnap.id, data: docSnap.data() };
+			return docSnap;
+			//return { id: docSnap.id, data: docSnap.data() };
 		} else {
 			// doc.data() will be undefined in this case
 			throw `No such project with id: ${id}!`;
@@ -238,20 +247,90 @@ export const readProject = async (id) => {
 		console.error(`readProject ERROR: ${err}`);
 	}
 };
-export const createProject = async (name) => {
-					// should additionally create "mySoundSet", "myGraph", and "myComposition" items
-					try {
-						const user = firebaseCurrentUser(true);
-						const docRef = await addDoc(collection(db, 'projects'), {
-							userId: user.uid,
-							createdAt: serverTimestamp(),
-							name,
-						});
-						console.log(`createProject: New project created with id: ${docRef.id}`);
-						return docRef;
-					} catch (err) {
-						console.error(`createProject ERROR: ${err}`);
-					}
+export const createProject = async (data) => {
+	// data = { name: 'string', soundSet: 'soundSets/id', graph: 'graphs/id', composition: 'compositions/id' }
+	// set whatever fields you want to set
+	try {
+		const user = firebaseCurrentUser(true);
+		const ts = serverTimestamp();
+		data.userId = user.uid;
+		data.createdAt = ts;
+		data.updatedAt = ts;
+		const docSnap = await addDoc(collection(db, 'projects'), data);
+		console.log(`createProject: New projects doc created with id: ${docSnap.id}`);
+		return docSnap;
+	} catch (err) {
+		console.error(`createProject ERROR: ${err}`);
+	}
+};
+export const cloneProject = async (id) => {
+	// 1. clone project but leave ref fields unset.  get newProjectRef
+	// 2. get all docs for the other proj
+	// 3. clone all the docs exactly as they are, setting new proj
+	// 4. keep id map of each srcDoc to newDoc
+	// 5. update new project, setting soundSet, graph, composition accordingly
+	// makes a copy and appends " [copy]" to the name
+	try {
+		// 1
+		const srcDocSnap = await readProject(id);
+		const srcData = srcDocSnap.data();
+		const newDocSnap = await createProject({
+			name: `${srcData.name} [copy]`,
+			//soundSet: srcData.soundSet,
+			//graph: srcData.graph,
+			//composition: srcData.composition
+		});
+		console.log(`cloneProject: New projects doc ${newDocSnap.id} cloned from id: ${id}`);
+		const newProjectRef = doc(db, 'projects', newDocSnap.id);
+
+		// 2
+		const srcSoundSets = await queryContent('soundSets', id);
+		const srcGraphs = await queryContent('graphs', id);
+		const srcCompositions = await queryContent('compositions', id);
+
+		// 3 and 4
+		const soundSetMap = {};
+		for (const srcSoundSet of srcSoundSets) {
+			const newSoundSetSnap = await cloneContent('soundSets', srcSoundSet.id, newProjectRef);
+			console.log(`....setting soundSetMap[${srcSoundSet.id}] =`, newSoundSetSnap);
+			soundSetMap[srcSoundSet.id] = newSoundSetSnap;
+		}
+		const graphMap = {};
+		for (const srcGraph of srcGraphs) {
+			const newGraphSnap = await cloneContent('graphs', srcGraph.id, newProjectRef);
+			console.log(`....setting graphMap[${srcGraph.id}] =`, newGraphSnap);
+			graphMap[srcGraph.id] = newGraphSnap;
+		}
+		const compositionMap = {};
+		for (const srcComposition of srcCompositions) {
+			const newCompositionSnap = await cloneContent('compositions', srcComposition.id, newProjectRef);
+			console.log(`....setting compositionMap[${srcComposition.id}] =`, newCompositionSnap);
+			compositionMap[srcComposition.id] = newCompositionSnap;
+		}
+
+		// 5
+		const updateData = {};
+		console.log(`....need srcData.soundSet.id =`, srcData.soundSet?.id);
+		if (srcData.soundSet?.id && soundSetMap[srcData.soundSet.id]) {
+			updateData.soundSet = soundSetMap[srcData.soundSet.id];
+		}
+		console.log(`....need srcData.graph.id =`, srcData.graph?.id);
+		if (srcData.graph?.id && graphMap[srcData.graph.id]) {
+			updateData.graph = graphMap[srcData.graph.id];
+		}
+		console.log(`....need srcData.composition.id =`, srcData.composition?.id);
+		if (srcData.composition?.id && compositionMap[srcData.composition.id]) {
+			updateData.composition = compositionMap[srcData.composition.id];
+		}
+		if (Object.keys(updateData).length) {
+			await updateProject(newDocSnap.id, updateData);
+			const updatedDocSnap = await readProject(newDocSnap.id);
+			return updatedDocSnap;
+		}
+		return newDocSnap;
+	} catch (err) {
+		console.error(`cloneProject ERROR: ${err}`);
+	}
 };
 export const updateProject = async (id, data) => {
 	// possible data fields are:
@@ -261,13 +340,13 @@ export const updateProject = async (id, data) => {
 		const docRef = doc(db, 'projects', id);
 		data.updatedAt = serverTimestamp(); // set updatedAt
 		// convert reference strings, i.e. "collectionName/idString", into docRefs
-		if (data.soundSet) {
+		if (typeof data.soundSet === 'string') {
 			data.soundSet = doc(db, data.soundSet);
 		}
-		if (data.graph) {
+		if (typeof data.graph === 'string') {
 			data.graph = doc(db, data.graph);
 		}
-		if (data.composition) {
+		if (typeof data.composition === 'string') {
 			data.composition = doc(db, data.composition);
 		}
 		await updateDoc(docRef, data);
@@ -278,14 +357,29 @@ export const updateProject = async (id, data) => {
 	}
 };
 export const deleteProject = async (id) => {
-					try {
-						//const user = firebaseCurrentUser(true);
-						const docRef = await deleteDoc(id);
-						console.log(`deleteProject: project ${docRef.id} updated`);
-						return docRef;
-					} catch (err) {
-						console.error(`deleteProject ERROR: ${err}`);
-					}
+	try {
+		// first delete all docs for this project id
+		const soundSets = await queryContent('soundSets', id);
+		for (const soundSet of soundSets) {
+			await deleteContent('soundSets', soundSet.id);
+		}
+		const graphs = await queryContent('graphs', id);
+		for (const graph of graphs) {
+			await deleteContent('graphs', graph.id);
+		}
+		const compositions = await queryContent('compositions', id);
+		for (const composition of compositions) {
+			await deleteContent('compositions', composition.id);
+		}
+
+		// finally delete the project itself
+		const docRef = doc(db, 'projects', id);
+		await deleteDoc(docRef);
+		console.log(`deleteProject: doc id ${id} deleted (and all its related content)`);
+		return;
+	} catch (err) {
+		console.error(`deleteProject ERROR: ${err}`);
+	}
 };
 
 
