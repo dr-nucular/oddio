@@ -12,7 +12,7 @@ import {
 
 // Firebase config for Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
-  apiKey: import.meta.env.FIREBASE_API_KEY,
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
   authDomain: "odddio.firebaseapp.com",
   projectId: "odddio",
   storageBucket: "odddio.appspot.com",
@@ -20,8 +20,6 @@ const firebaseConfig = {
   appId: "1:410607179750:web:6b32f8d4e2cec85c33a827",
   measurementId: "G-5NT142J8J9"
 };
-
-//console.log(`* UM: process.env: ${JSON.stringify(process.env), null, 2}`);
 
 // Initialize Firebase, Cloud Firestore, etc.
 const firebaseApp = initializeApp(firebaseConfig);
