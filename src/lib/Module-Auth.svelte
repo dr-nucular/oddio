@@ -3,19 +3,21 @@
 	import { firebaseLogin, firebaseLogout } from '../firebase.js';
 	import { sModules, sAuthInfo } from '../stores.js';
 
+	// subscription vars
 	let modules = {};
 	let isLoggedIn = false;
 	let title = 'Log In';
 	let email = null;
 
+	// store subscriptions
 	const unsubAuthInfo = sAuthInfo.subscribe(obj => {
 		isLoggedIn = obj.isLoggedIn;
 		title = isLoggedIn ? "Log Out" : "Log In";
 		email = obj.username;
 	});
-	
 	const unsubModules = sModules.subscribe(obj => modules = obj);
 	$: cssVarStyles = `--bgColor:${modules.auth?.bgColor}`;
+
 
 	onDestroy(() => {
 		unsubAuthInfo();

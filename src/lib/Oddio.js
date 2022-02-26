@@ -1,7 +1,7 @@
 /**
  * Oddio.js
  * - HTML5 WebAudio API interface
- * (c) 2019, 2020 by Owen Grace, Homer Learning Inc.
+ * (c) 2019-2022 by Owen Grace
  */
 
 const DEBUG = true;
@@ -152,7 +152,7 @@ class Sound {
 class Palette {
 	constructor(config = {}, id) {
 		this.id = id; // optional identifier
-		this.type = config.type || null;
+		this.name = config.name || null;
 		this.publicNodes = config.publicNodes || false;
 		this.singleton = config.singleton || false;
 
@@ -550,7 +550,7 @@ class Palette {
 	// nodeInfo = details of node in graph, including ._audio_node and .props{}
 	// params = method params for the play/stop/set stuff
 	_play(nodeName, nodeInfo, params) {
-		DEBUG && console.log('AUDEO PLAY: nodeName:', nodeName, 'nodeInfo:', nodeInfo, 'params:', params);
+		DEBUG && console.log('ODDIO PLAY: nodeName:', nodeName, 'nodeInfo:', nodeInfo, 'params:', params);
 		if (nodeInfo.type === 'source') {
 			if (typeof nodeInfo.sound !== 'undefined') {
 				//console.log("PLAY: source node:", nodeName);
@@ -669,7 +669,7 @@ class Palette {
 	}
 
 	_set(nodeName, nodeInfo, params) {
-		DEBUG && console.log('AUDEO SET: nodeName:', nodeName, 'nodeInfo:', nodeInfo, 'params:', params);
+		DEBUG && console.log('ODDIO SET: nodeName:', nodeName, 'nodeInfo:', nodeInfo, 'params:', params);
 
 		// general params for basically any audioNode:
 		const delay = params.delay || 0;
@@ -1271,14 +1271,14 @@ class Oddio {
 
 	/* INSTANCES */
 	createPalette(config = {}, id) {
-		DEBUG && console.log(`Oddio.createPalette() [id: '${id}', type: '${config.type}']`);
+		DEBUG && console.log(`Oddio.createPalette() [id: '${id}', type: '${config.name}']`);
 
-		// if config.singleton, then return already existing palette of the same config.type
+		// if config.singleton, then return already existing palette of the same config.name
 		if (config.singleton) {
-			const foundPal = this.palettes.find((pal) => pal.type === config.type);
+			const foundPal = this.palettes.find((pal) => pal.name === config.name);
 			if (foundPal) {
 				console.warn(
-					`Oddio.createPalette() singleton alert! Already created one of type '${config.type}', returning it instead of creating another`
+					`Oddio.createPalette() singleton alert! Already created one w/ name '${config.name}', returning it instead of creating another`
 				);
 				return foundPal;
 			}
@@ -1290,7 +1290,7 @@ class Oddio {
 		this.palettes.push(pal);
 		DEBUG &&
 			console.log(
-				`Oddio.createPalette() success [id: '${pal.id}', type: '${pal.type}'], ${this.palettes.length} palettes total`
+				`Oddio.createPalette() success [id: '${pal.id}', type: '${pal.name}'], ${this.palettes.length} palettes total`
 			);
 		return pal;
 	}
@@ -1299,7 +1299,7 @@ class Oddio {
 		// tries to clear references to stuff, if possible.  always returns null.
 		if (!pal) return null;
 
-		DEBUG && console.log(`Oddio.destroyPalette() [id: '${pal.id}', type: '${pal.type}']`);
+		DEBUG && console.log(`Oddio.destroyPalette() [id: '${pal.id}', type: '${pal.name}']`);
 
 		const idx = this.palettes.indexOf(pal);
 		if (idx > -1) {
@@ -1307,7 +1307,7 @@ class Oddio {
 			pal.destroy();
 			DEBUG &&
 				console.log(
-					`Oddio.destroyPalette() success [id: '${pal.id}', type: '${pal.type}'], ${this.palettes.length} palettes remain`
+					`Oddio.destroyPalette() success [id: '${pal.id}', type: '${pal.name}'], ${this.palettes.length} palettes remain`
 				);
 		} else {
 			DEBUG &&
@@ -1322,17 +1322,17 @@ class Oddio {
 		return this.palettes.filter((pal) => pal.publicNodes);
 	}
 
-	getPalettesByType(type) {
+	getPalettesByName(name) {
 		// return array of matches, empty array if none
 		if (!type) {
-			console.warn(`Oddio.getPalettesByType() failure: specify a type`);
+			console.warn(`Oddio.getPalettesByName() failure: specify a name`);
 			return;
 		}
 
 		// throw warning if there are 0
-		const matchingPalettes = this.palettes.filter((pal) => pal.type === type);
+		const matchingPalettes = this.palettes.filter((pal) => pal.name === name);
 		if (matchingPalettes.length === 0) {
-			DEBUG && console.warn(`Oddio.getPalettesByType(): no palettes of type '${type}'`);
+			DEBUG && console.warn(`Oddio.getPalettesByName(): no palettes w/ name '${type}'`);
 		}
 		return matchingPalettes;
 	}

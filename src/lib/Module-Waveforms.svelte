@@ -1,10 +1,19 @@
 <script>
+	import { onDestroy } from 'svelte';
 	import { sModules } from '../stores.js';
 
+	// subscription vars
 	let modules = {};
 
-	sModules.subscribe(obj => modules = obj);
+	// store subscriptions
+	const unsubModules = sModules.subscribe(obj => modules = obj);
 	$: cssVarStyles = `--bgColor:${modules.waveforms?.bgColor}`;
+
+
+	onDestroy(() => {
+		unsubModules();
+	});
+
 </script>
 
 

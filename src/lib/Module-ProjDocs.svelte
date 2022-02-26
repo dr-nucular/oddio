@@ -1,9 +1,6 @@
 <script>
 	import { onDestroy } from 'svelte';
-	import {
-		readProject, updateProject,
-		queryContent, cloneContent, readContent, updateContent, deleteContent
-	} from '../firebase.js';
+	import { readProject, updateProject, queryContent, cloneContent, readContent, updateContent, deleteContent } from '../firebase.js';
 	import { sAuthInfo, sModules, sCurProject, sProjDocs, sActiveProjDocs, gProjDocProps } from '../stores.js';
 
 	// exported attributes

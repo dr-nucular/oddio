@@ -31,7 +31,7 @@
 	};
 
 
-	// subscriptions
+	// store subscriptions
 	const unsubAuthInfo = sAuthInfo.subscribe(obj => authInfo = obj);
 	const unsubModules = sModules.subscribe(obj => modules = obj);
 	$: cssVarStyles = `--bgColor:${modules.projects?.bgColor}`;

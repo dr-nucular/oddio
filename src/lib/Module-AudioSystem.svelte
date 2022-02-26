@@ -1,19 +1,27 @@
 <script>
 	//import Visibility from '';
 	import { onMount, onDestroy } from 'svelte';
-	import { sModules, sAudioContextInfo } from '../stores.js';
+	import { sModules, sAudioContextInfo, sActiveProjDocs } from '../stores.js';
 	import Oddio from '$lib/Oddio.js';
 
+	// subscription vars
 	let modules = {};
 	let audioContextInfo = {};
+	let activeProjDocs = {};
 
-	sModules.subscribe(obj => modules = obj);
-	$: cssVarStyles = `--bgColor:${modules.audioSystem?.bgColor}`;
-
-	sAudioContextInfo.subscribe(obj => audioContextInfo = obj);
-
+	// other states
 	let frame;
 	let mTime = {};
+	let loadSourcesButton;
+
+	// store subscriptions
+	const unsubModules = sModules.subscribe(obj => modules = obj);
+	$: cssVarStyles = `--bgColor:${modules.audioSystem?.bgColor}`;
+	const unsubAudioContextInfo = sAudioContextInfo.subscribe(obj => audioContextInfo = obj);
+	const unsubActiveProjDocs = sActiveProjDocs.subscribe(collections => activeProjDocs = collections);
+
+
+
 	const loop = function() {
 		frame = requestAnimationFrame(loop);
 		mTime = Oddio.getPlayheadNow();
@@ -39,6 +47,32 @@
 		const timeReference = Oddio.setPlayheadParams(opts);
 		console.log(`resetCurrentTime: ${JSON.stringify(timeReference, null, 2)}`);
 	};
+
+
+	const loadSoundSet = async () => {
+		console.log(`loadSoundSet()`);
+		try {
+			const soundSet = activeProjDocs.soundSets?.data();
+			const configJson = JSON.parse(soundSet.configJson);
+			console.log(`- configJson.sources (keys):`, Object.keys(configJson.sources));
+
+			const sourceKeys = Object.keys(configJson.sources);
+			loadSourcesButton.innerText = "Loading Sound Set Sources";
+			loadSourcesButton.disabled = true;
+
+			const allLoadPromises = sourceKeys.map(sKey => Oddio.load(configJson.sources[sKey]));
+			await Promise.all(allLoadPromises);
+			
+			loadSourcesButton.innerText = "Load Sound Set Sources";
+			loadSourcesButton.disabled = false;
+			console.log(`loadSoundSet(): DONE`);
+		} catch (err) {
+			console.error(`loadSoundSet() ERROR:`, err);
+		}
+	};
+
+
+
 	onMount(() => {
 		//console.log(`ON MOUNT`);
 		startLoop(); // TODO: only do this if the audio context is running?
@@ -46,6 +80,10 @@
 	onDestroy(() => {
 		//console.log(`ON DESTROY`);
 		stopLoop();
+
+		unsubModules();
+		unsubAudioContextInfo();
+		unsubActiveProjDocs();
 	});
 </script>
 
@@ -59,7 +97,9 @@
 	<button on:click={() => setPlayheadParams({ playheadSpeed: 0 })}>Stop</button><br/>
 	<i>- State: {audioContextInfo.state}</i><br/>
 	<i>- AudioContext Time: {mTime.currentTime}</i><br/>
-	<i>- Playhead Time: {mTime.now}</i>
+	<i>- Playhead Time: {mTime.now}</i><br/>
+	<br/>
+	<button on:click={loadSoundSet} bind:this={loadSourcesButton}>Load Sound Set Sources</button><br/>
 </div>
 
 <style>
