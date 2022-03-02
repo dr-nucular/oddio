@@ -6,10 +6,9 @@
 
 const DEBUG = true;
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 class Buff {
-	constructor(ac, filename = '') {
-		this.ac = ac;
+	constructor(filename = '') {
+		this.ac = Oddio.instance.getAC();
 		this.filename = filename;
 		this.loadPromise = null;
 		this.audioBuffer = null;
@@ -94,7 +93,7 @@ class Buff {
 	}
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 class Sound {
 	constructor() {
 		this.filenames = []; // audio filenames.  if > 1, they are triggered randomly
@@ -148,7 +147,7 @@ class Sound {
 	}
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 class Palette {
 	constructor(config = {}, id) {
 		this.id = id; // optional identifier
@@ -1105,7 +1104,55 @@ class Palette {
 	}
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+class Scheduler {
+
+	constructor() {
+		this.ac = Oddio.instance.getAC();
+		this.events = []; // array of objects, each like: { time: <float seconds>, etc }
+		this.curEventIdx = 0;
+		this.pollPeriod = 0.5; // seconds
+		this.pollPeriodOverlap = 0.1; // seconds
+		this.pollTimeoutId = null;
+	}
+
+	setEvents(events) {
+		this.events = events;
+	}
+	// addEvents()
+	// removeEvents()?
+
+	start(fromTime) {
+		// clear it if its already going
+		this.stop();
+
+		// fromTime, if not provided, should be determined from where the current playhead time is.
+		// if provided, should reset the playhead to the time
+		
+		this.scheduleEvents(fromTime);
+		this.pollTimeoutId = setTimeout(() => {
+			this.scheduleEvents(fromTime);
+		}, this.pollPeriod * 1000);
+	}
+
+	stop() {
+		if (this.pollTimeoutId) {
+			clearTimeout(this.pollTimeoutId);
+			this.pollTimeoutId = null;
+		}
+		this.cancelScheduledEvents();
+	}
+
+	scheduleEvents(wStartTime, wDur) {
+		console.log(`..... schedule events from ${wStartTime} to ${wStartTime + wDur}`);
+	}
+
+	cancelScheduledEvents() {
+
+	}
+
+}
+
+
 class Oddio {
 	//static instance;
 
@@ -1238,7 +1285,7 @@ class Oddio {
 
 		const promises = fileOrFiles.map((filename) => {
 			if (!this.buffs[filename]) {
-				this.buffs[filename] = new Buff(this.ac, filename);
+				this.buffs[filename] = new Buff(filename);
 			}
 			return this.buffs[filename].load();
 		});

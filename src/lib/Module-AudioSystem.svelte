@@ -54,13 +54,13 @@
 		try {
 			const soundSet = activeProjDocs.soundSets?.data();
 			const configJson = JSON.parse(soundSet.configJson);
-			console.log(`- configJson.sources (keys):`, Object.keys(configJson.sources));
-
-			const sourceKeys = Object.keys(configJson.sources);
+			
+			const sourceKeys = Object.keys(configJson.sounds);
+			console.log(`- configJson.sounds (keys):`, sourceKeys);
 			loadSourcesButton.innerText = "Loading Sound Set Sources";
 			loadSourcesButton.disabled = true;
 
-			const allLoadPromises = sourceKeys.map(sKey => Oddio.load(configJson.sources[sKey]));
+			const allLoadPromises = sourceKeys.map(sKey => Oddio.load(configJson.sounds[sKey]));
 			await Promise.all(allLoadPromises);
 			
 			loadSourcesButton.innerText = "Load Sound Set Sources";
