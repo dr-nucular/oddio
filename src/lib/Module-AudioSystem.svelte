@@ -71,6 +71,16 @@
 		}
 	};
 
+	const startScheduler = () => {
+		console.log(`startScheduler()`);
+		const scheduler = Oddio.getScheduler('scheduler');
+		scheduler.start();
+	};
+	const stopScheduler = () => {
+		console.log(`stopScheduler()`);
+		const scheduler = Oddio.getScheduler('scheduler');
+		scheduler.stop();
+	};
 
 
 	onMount(() => {
@@ -99,7 +109,11 @@
 	<i>- AudioContext Time: {mTime.currentTime}</i><br/>
 	<i>- Playhead Time: {mTime.now}</i><br/>
 	<br/>
+
 	<button on:click={loadSoundSet} bind:this={loadSourcesButton}>Load Sound Set Sources</button><br/>
+
+	<button on:click={startScheduler}>Scheduler Start</button><br/>
+	<button on:click={stopScheduler}>Scheduler Stop</button><br/>
 </div>
 
 <style>

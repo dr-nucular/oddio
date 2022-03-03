@@ -1106,13 +1106,15 @@ class Palette {
 
 class Scheduler {
 
-	constructor() {
+	constructor(name) {
+		this.name = name;
 		this.ac = Oddio.instance.getAC();
 		this.events = []; // array of objects, each like: { time: <float seconds>, etc }
 		this.curEventIdx = 0;
 		this.pollPeriod = 0.5; // seconds
 		this.pollPeriodOverlap = 0.1; // seconds
 		this.pollTimeoutId = null;
+		console.log(`Scheduler.constructor('${name}')`);
 	}
 
 	setEvents(events) {
@@ -1125,13 +1127,23 @@ class Scheduler {
 		// clear it if its already going
 		this.stop();
 
-		// fromTime, if not provided, should be determined from where the current playhead time is.
-		// if provided, should reset the playhead to the time
+		// fromTime, if !undefined, should set Oddio's playheadNow data first
+		if (fromTime !== undefined) {
+			Oddio.instance.setPlayheadParams({ playheadTime: fromTime });
+		}
 		
-		this.scheduleEvents(fromTime);
-		this.pollTimeoutId = setTimeout(() => {
-			this.scheduleEvents(fromTime);
-		}, this.pollPeriod * 1000);
+
+		// timeout callback
+		const timeoutCB = () => {
+			this.pollTimeoutId = setTimeout(timeoutCB, this.pollPeriod * 1000);
+			this._scheduleEvents();
+		};
+
+		// run it now to kickstart it
+		this.pollTimeoutId = setTimeout(timeoutCB, this.pollPeriod * 1000);
+		this._scheduleEvents();
+
+
 	}
 
 	stop() {
@@ -1139,15 +1151,22 @@ class Scheduler {
 			clearTimeout(this.pollTimeoutId);
 			this.pollTimeoutId = null;
 		}
-		this.cancelScheduledEvents();
+		this._cancelScheduledEvents();
 	}
 
-	scheduleEvents(wStartTime, wDur) {
-		console.log(`..... schedule events from ${wStartTime} to ${wStartTime + wDur}`);
+	_scheduleEvents(phNow) {
+		if (!phNow) {
+			phNow = Oddio.instance.getPlayheadNow();
+		}
+		const eventTimeSpan = (this.pollPeriod + this.pollPeriodOverlap) * phNow.playheadSpeed;
+		console.log(`_scheduleEvents(): scheduling events from ${phNow.now} to ${phNow.now + eventTimeSpan}`);
 	}
 
-	cancelScheduledEvents() {
-
+	_cancelScheduledEvents(phNow) {
+		if (!phNow) {
+			phNow = Oddio.instance.getPlayheadNow();
+		}
+		console.log(`_cancelScheduledEvents(): canceling scheduled events from ${phNow.now} and on...`);
 	}
 
 }
@@ -1171,6 +1190,8 @@ class Oddio {
 			playheadTime: 0,
 			playheadSpeed: 1.0
 		};
+
+		this.schedulers = {}; // key = name, value = Scheduler instance
 	}
 
 	async init() {
@@ -1251,7 +1272,21 @@ class Oddio {
 		return this.ac.state === 'suspended';
 	}
 
+	/* SCHEDULER */
+	getScheduler(name) {
+		if (!name || typeof name !== 'string') {
+			console.error(`getScheduler() ERROR: name must be provided.`);
+			return;
+		}
+		if (!this.schedulers[name]) {
+			this.schedulers[name] = new Scheduler(name);
+		}
+		return this.schedulers[name];
+	}
+
+	/* playhead crud, might be temp */
 	getPlayheadNow() {
+		// returns { currentTime, now, audioContextTime, playheadTime, playheadSpeed }
 		const currentTime = this.ac?.currentTime || 0;
 		return Object.assign(this.playheadParams, {
 			currentTime,
@@ -1264,7 +1299,9 @@ class Oddio {
 		// if opts.audioContextTime is undefined, then use currentTime
 		const playheadNow = this.getPlayheadNow();
 		this.playheadParams = {
-			audioContextTime: playheadNow.currentTime,
+			audioContextTime: (typeof opts.audioContextTime === 'number')
+				? opts.audioContextTime
+				: playheadNow.currentTime,
 			playheadTime: (typeof opts.playheadTime === 'number')
 				? opts.playheadTime
 				: playheadNow.now,
