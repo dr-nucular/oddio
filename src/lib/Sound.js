@@ -43,7 +43,7 @@ class Buff {
 					this.xhrResponse = xhr.response;
 
 					// TODO: only continue to decode if opts says so
-					if (opts.decodeImmediately) {
+					if (opts?.decodeImmediately) {
 						this.decode().then(resolve, reject);
 					} else {
 						resolve();
