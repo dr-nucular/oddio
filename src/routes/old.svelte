@@ -6,13 +6,13 @@
 	import '../app.css';
 	import Logo from '$lib/Logo.svelte';
 	import TopNav from '$lib/TopNav.svelte';
-	import LeftNav from '$lib/LeftNav.svelte';
-	import Main from '$lib/Main.svelte';
+	import LeftNav from '$lib/LeftNav-old.svelte';
+	import Main from '$lib/Main-old.svelte';
 	import { firebaseCreateUserObserver } from '../firebase.js';
 	import { sAuthInfo } from '../stores.js';
 	import { onMount, onDestroy } from 'svelte';
 
-	const logoName = "..::!!??";
+	const logoName = "odddio";
 	let authInfo = {};
 
 	sAuthInfo.subscribe(obj => authInfo = obj);
