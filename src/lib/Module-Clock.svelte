@@ -1,7 +1,7 @@
 <script>
 	//import Visibility from '';
 	import { onMount, onDestroy } from 'svelte';
-	import { sModules, sAudioContextInfo, sActiveProjDocs, sBuffs } from '../stores.js';
+	import { sModules, sAudioContextInfo, sActiveProjDocs, sBuffs, sProject } from '../stores.js';
 	import Oddio from '$lib/Oddio.js';
 
 	// subscription vars
@@ -9,6 +9,7 @@
 	let audioContextInfo = {};
 	let activeProjDocs = {};
 	let buffsArray = [];
+	let project;
 
 	// other states
 	let frame;
@@ -33,6 +34,7 @@
 			}
 		});
 	});
+	const unsubProject = sProject.subscribe(obj => project = obj);
 
 
 
@@ -192,6 +194,7 @@
 		unsubAudioContextInfo();
 		unsubActiveProjDocs();
 		unsubBuffs();
+		unsubProject();
 	});
 </script>
 
@@ -224,6 +227,8 @@
 			No buffs
 		{/if}
 	</div>
+
+	Project: {project?.name}<br/><br/>
 
 	<button on:click={() => setClockParams({ mediaTime: 0 })}>Reset mediaTime to Zero</button><br/>
 	<button on:click={() => setClockParams({ mediaSpeed: 1 })}>Play</button>

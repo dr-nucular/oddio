@@ -49,4 +49,6 @@ export let sAudioContextInfo = writable({
 // ODDIO shizzle
 export let sBuffs = writable({});
 
+//////////////////////////////////////// 
 
+export let sProject = writable({});

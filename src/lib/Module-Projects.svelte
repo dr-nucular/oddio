@@ -1,6 +1,6 @@
 <script>
 	import { onDestroy } from 'svelte';
-	import { sAuthInfo, sModules } from '../stores.js';
+	import { sAuthInfo, sModules, sProject } from '../stores.js';
 
 	// subscription vars
 	let authInfo = {};
@@ -14,17 +14,25 @@
 	const unsubAuthInfo = sAuthInfo.subscribe(obj => authInfo = obj);
 	const unsubModules = sModules.subscribe(obj => modules = obj);
 	$: cssVarStyles = `--bgColor:${modules.projects?.bgColor}`;
+	const unsubProject = sProject.subscribe(obj => project = obj);
+
+
 
 	const loadProject = () => {
-		project = { yay: true, startTime: 0, endTime: 184.56789 };
+		project = { name: "Testttt", startTime: 0, endTime: 184.56789 };
+		sProject.set(project);
+
 		loadProjectButton.innerText = "Reload Project";
 		//const clockRef = Oddio.setClockParams(opts);
 		//console.log(`setClockParams() clockRef: ${JSON.stringify(clockRef, null, 2)}`);
 	};
 
+
+
 	onDestroy(() => {
 		unsubAuthInfo();
 		unsubModules();
+		unsubProject();
 	});
 
 </script>
