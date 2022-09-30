@@ -1,19 +1,19 @@
 <script>
 	import { onDestroy } from 'svelte';
-	import { firebaseLogin, firebaseLogout } from '../firebase.js';
+	import { firebaseLogin, firebaseLoginAnon, firebaseLogout } from '../firebase.js';
 	import { sModules, sAuthInfo } from '../stores.js';
 
 	// subscription vars
 	let modules = {};
-	let isLoggedIn = false;
+	let authInfo;
 	let title = 'Log In';
-	let email = null;
+	let displayName;
 
 	// store subscriptions
 	const unsubAuthInfo = sAuthInfo.subscribe(obj => {
-		isLoggedIn = obj.isLoggedIn;
-		title = isLoggedIn ? "Log Out" : "Log In";
-		email = obj.username;
+		authInfo = obj;
+		title = authInfo?.isLoggedIn ? 'Log Out' : 'Log In';
+		displayName = obj.isAnonymous ? 'anonymous' : obj.displayName;
 	});
 	const unsubModules = sModules.subscribe(obj => modules = obj);
 	$: cssVarStyles = `--bgColor:${modules.auth?.bgColor}`;
@@ -29,12 +29,19 @@
 	style={cssVarStyles}
 	class="content-module">
 	<h2>&starf;&nbsp; {title} &nbsp;&starf;</h2><hr/>
-	{#if isLoggedIn}
-		You are logged in with Google account {email}.<br/><br/>
+	{#if authInfo?.isLoggedIn}
+		{#if authInfo.isAnonymous}
+			You are logged in anonymously
+		{:else}
+			You are logged in as {authInfo.displayName}
+		{/if}
+		(uid: {authInfo.uid}).<br/>
+		<br/>
 		<button on:click={firebaseLogout}>Log Out</button>	
 	{:else}
 		You are not currently logged in.<br/><br/>
-		<button on:click={firebaseLogin}>Log In</button> using Google authentication
+		<button on:click={firebaseLogin}>Log In With Google</button> or
+		<button on:click={firebaseLoginAnon}>Log In Anonymously</button>
 	{/if}
 </div>
 

@@ -1,9 +1,9 @@
 import { initializeApp } from "firebase/app";
-import { getAuth, signInWithPopup, signOut, onAuthStateChanged, GoogleAuthProvider } from "firebase/auth";
+import { getAuth, signInWithPopup, signInAnonymously, signOut, onAuthStateChanged, GoogleAuthProvider } from "firebase/auth";
 import {
 	getFirestore, collection, query, where, orderBy, limit,
 	doc, getDoc, getDocs, addDoc, updateDoc, deleteDoc,
-	serverTimestamp
+	serverTimestamp, Timestamp
 } from "firebase/firestore";
 //import { getAnalytics } from "firebase/analytics";
 
@@ -35,12 +35,27 @@ export const firebaseLogin = async () => {
 	try {
 		const auth = getAuth(firebaseApp);
 		const res = await signInWithPopup(auth, provider).then((result) => {
+			console.log(`firebaseLogin SUCCESS result:`, result);
 			const user = result.user;
 			console.log(`firebaseLogin SUCCESS: ${user.email} (${user.displayName})`);
 		});
 		return res;
 	} catch (err) {
 		console.error(`firebaseLogin ERROR: ${err}`);
+	}
+};
+
+export const firebaseLoginAnon = async () => {
+	try {
+		const auth = getAuth(firebaseApp);
+		const res = await signInAnonymously(auth).then((result) => {
+			console.log(`firebaseLoginAnon SUCCESS result:`, result);
+			const user = result.user;
+			console.log(`firebaseLoginAnon SUCCESS: ${user.email} (${user.displayName})`);
+		});
+		return res;
+	} catch (err) {
+		console.error(`firebaseLoginAnon ERROR: ${err}`);
 	}
 };
 
@@ -381,6 +396,14 @@ export const deleteProject = async (id) => {
 	}
 };
 
+
+//////////
+// SYNC //
+//////////
+export const getServerTimestamp = async () => {
+	const sts = await serverTimestamp();
+	return sts;
+};
 
 
 ////// TEMP //////

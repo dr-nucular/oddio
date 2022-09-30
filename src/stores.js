@@ -3,7 +3,11 @@ import { writable } from 'svelte/store';
 export let sAuthInfo = writable({
 	isBusy: false,
 	isLoggedIn: false,
-	username: null,
+	// then some firestore user props:
+	isAnonymous: false,
+	displayName: null,
+	email: null,
+	uid: null
 });
 
 export let sModules = writable({});

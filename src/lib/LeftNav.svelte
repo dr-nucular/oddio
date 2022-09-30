@@ -6,7 +6,7 @@
 	// exported attributes
 	export let showProjects = false;
 	export let showClock = false;
-	export let showWaveforms = false;
+	export let showSync = false;
 
 	// subscription vars
 	let notLoggedIn = true;
@@ -32,8 +32,10 @@
 
 <MagicButton text="Projects" disabled={notLoggedIn} color="#bb99bb" moduleName="projects" visible={showProjects}/>
 <hr/>
+<MagicButton text="Sync" color="#ccaa88" moduleName="sync" visible={showSync}/>
+<br/>
 <MagicButton text="Clock" color="#88cccc" moduleName="clock" visible={showClock}/>
-<MagicButton text="Waveforms" color="#ccaa88" moduleName="waveforms" visible={showWaveforms}/>
+<br/>
 
 <style>
 

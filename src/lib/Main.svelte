@@ -4,7 +4,7 @@
 	import AuthModule from '$lib/Module-Auth.svelte';
 	import ProjectsModule from '$lib/Module-Projects.svelte';
 	import ClockModule from '$lib/Module-Clock.svelte';
-	import WaveformsModule from '$lib/Module-Waveforms.svelte';
+	import SyncModule from '$lib/Module-Sync.svelte';
 
 	let modules = {};
 
@@ -24,12 +24,14 @@
 	<ProjectsModule/>
 {/if}
 
+{#if modules.sync?.visible}
+	<SyncModule/>
+{/if}
+
 {#if modules.clock?.visible}
 	<ClockModule/>
 {/if}
 
-{#if modules.waveforms?.visible}
-	<WaveformsModule/>
-{/if}
+
 
 

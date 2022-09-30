@@ -25,15 +25,25 @@
 			if (user) {
 				// User has signed in, see docs for a list of available properties
 				// https://firebase.google.com/docs/reference/js/firebase.User
-				authInfo.isLoggedIn = true;
-				authInfo.username = user.email;
+				authInfo = {
+					isLoggedIn: true,
+					isAnonymous: user.isAnonymous,
+					displayName: user.displayName,
+					email: user.email,
+					uid: user.uid
+				};
 
-				// also init/populate a bunch of store data?  at least projects?
+				// also init/populate a bunch of store data here?  perhaps their projects?
 				
 			} else {
 				// User has signed out or there was an error using firebase
-				authInfo.isLoggedIn = false;
-				authInfo.username = null;
+				authInfo = {
+					isLoggedIn: false,
+					isAnonymous: false,
+					displayName: null,
+					email: null,
+					uid: null
+				};
 
 				// clear/reset store data here?  hmm doesn't seem to work as i was imagining
 
