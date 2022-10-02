@@ -1,87 +1,96 @@
 <script>
-	import { onDestroy } from 'svelte';
-	import { getServerTimestamp } from '../firebase.js';
-	import { sAuthInfo, sModules, sProject } from '../stores.js';
-
-	const delay = (ms) => {
-		if (ms > 0) {
-			return new Promise(function (resolve, reject) {
-				setTimeout(() => { resolve(); }, ms);
-			});
-		}
-		return Promise.resolve();
-	}
+import QRCode from 'qrcode'; // https://www.npmjs.com/package/qrcode
+import { onDestroy } from 'svelte';
+import { getServerTimestamp } from '../firebase.js';
+import { sAuthInfo, sModules, sProject } from '../stores.js';
+import { delay, getDeviceId } from './utils';
 
 
+// subscription vars
+let authInfo = {};
+let modules = {};
 
-	// subscription vars
-	let authInfo = {};
-	let modules = {};
+// other states
+let syncButton;
+let qrButton;
+let qrCanvas;
+let project;
+let latencyGuess = {
+	startedAt: null,
+	receivedAt: null,
+	finishedAt: null,
 
-	// other states
-	let syncButton;
-	let project;
-	let latencyGuess = {
-		startedAt: null,
-		receivedAt: null,
-		finishedAt: null,
+	sendDurGuess: 1000,
+	sendDurActual: null,
+	returnDurGuess: 1000,
+	returnDurActual: null,
+	serverTimeGuess: null,
+	serverTimeActual: null,
+};
 
-		sendDurGuess: 1000,
-		sendDurActual: null,
-		returnDurGuess: 1000,
-		returnDurActual: null,
-		serverTimeGuess: null,
-		serverTimeActual: null,
-	};
+// store subscriptions
+const unsubAuthInfo = sAuthInfo.subscribe(obj => authInfo = obj);
+const unsubModules = sModules.subscribe(obj => modules = obj);
+$: cssVarStyles = `--bgColor:${modules.sync?.bgColor}`;
+const unsubProject = sProject.subscribe(obj => project = obj);
 
-	// store subscriptions
-	const unsubAuthInfo = sAuthInfo.subscribe(obj => authInfo = obj);
-	const unsubModules = sModules.subscribe(obj => modules = obj);
-	$: cssVarStyles = `--bgColor:${modules.sync?.bgColor}`;
-	const unsubProject = sProject.subscribe(obj => project = obj);
+const startSync = async () => {
+	/*
+	project = { name: "Testttt", startTime: 0, endTime: 184.56789 };
+	sProject.set(project);
+	*/
+	const d = getDeviceId();
+	console.log(`>>> deviceId =`, d);
 
-	const startSync = async () => {
-		/*
-		project = { name: "Testttt", startTime: 0, endTime: 184.56789 };
-		sProject.set(project);
-		*/
-		syncButton.innerText = "Syncing...";
-		syncButton.disabled = true;
+	syncButton.innerText = "Syncing...";
+	syncButton.disabled = true;
 
-		const syncDur = await _syncRequest();
-		console.log(`... syncDur ${syncDur}`);
+	const syncDur = await _syncRequest();
+	console.log(`... syncDur ${syncDur}`);
 
-		syncFinished();
-	};
+	syncFinished();
+};
 
-	const _syncRequest = async () => {
-//		if (!latencyGuess) {
-//
-//		}
-		const startTime = performance.now();
-		//const ms = Math.random() * 1000; // 0 to 1 second
-		const syncDur = await getServerTimestamp().then((sts) => {
-			console.log(`>>> sts:`, sts);
-			const endTime = performance.now();
-			const d = endTime - startTime;
-			return d;
-		});
-		return syncDur;
-	};
-
-
-
-	const syncFinished = () => {
-		syncButton.innerText = "Re-Sync";
-		syncButton.disabled = false;
-	};
-
-
-	onDestroy(() => {
-		unsubAuthInfo();
-		unsubModules();
-		unsubProject();
+const _syncRequest = async () => {
+	//if (!latencyGuess) {
+	//
+	//}
+	const startTime = performance.now();
+	//const ms = Math.random() * 1000; // 0 to 1 second
+	const syncDur = await getServerTimestamp().then((sts) => {
+		console.log(`>>> sts:`, sts);
+		const endTime = performance.now();
+		const d = endTime - startTime;
+		return d;
 	});
+	return syncDur;
+};
+
+
+
+const syncFinished = () => {
+	syncButton.innerText = "Re-Sync";
+	syncButton.disabled = false;
+};
+
+
+const generateQR = async () => {
+	try {
+		const url = "hello world?";
+		const result = await QRCode.toCanvas(qrCanvas, url);
+		qrCanvas.style.display = 'block';
+		console.log(result);
+	} catch (err) {
+		console.error(err);
+	}
+}
+
+
+onDestroy(() => {
+	unsubAuthInfo();
+	unsubModules();
+	unsubProject();
+});
 
 </script>
 
@@ -107,7 +116,9 @@
 
 	<button on:click={startSync} bind:this={syncButton}>Sync Me</button><br/>
 
-	TBD!!?!
+	<button on:click={generateQR} bind:this={qrButton}>Generate QRCode</button><br/>
+
+	<canvas bind:this={qrCanvas}></canvas>
 </div>
 
 
@@ -122,5 +133,8 @@
 	}
 	a {
 		cursor: pointer;
+	}
+	canvas {
+		display: none;
 	}
 </style>

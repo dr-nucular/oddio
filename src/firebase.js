@@ -405,6 +405,38 @@ export const getServerTimestamp = async () => {
 	return sts;
 };
 
+/*
+sesh table
+- createdAt
+- createdBy (userId)
+- updatedAt (last detail change)
+- detail (json)
+
+device table
+- createdAt
+- createdBy (userId)
+- updatedAt (last change to sesh or tsDelta)
+- tsDelta (or tsOffset)
+- sesh (reference to sesh uid -- could be null/undefined if its stale)
+
+
+
+
+...
+device will listen for changes to sesh info
+
+sesh leader will have a sesh view that includes list of all devices
+
+
+
+*/
+
+/**
+ * COOL: https://cloud.google.com/firestore/docs/query-data/listen
+ * use this to listen when changes occur w/ a db table (i.e. getSeshParticipants or something)
+ * https://firebase.google.com/docs/database/web/offline-capabilities#section-latency
+ * 
+ */
 
 ////// TEMP //////
 export const firebaseAddDoc = async (collectionName, data) => {

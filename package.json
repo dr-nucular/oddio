@@ -21,6 +21,7 @@
   "type": "module",
   "dependencies": {
     "firebase": "^9.6.4",
-    "qrcode": "^1.5.1"
+    "qrcode": "^1.5.1",
+    "uuid": "^9.0.0"
   }
 }
