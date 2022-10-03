@@ -32,3 +32,6 @@ export const getDeviceId = () => {
 	}
 	return deviceId;
 };
+export const setDeviceId = (id) => {
+	window.localStorage.setItem('deviceId', id);
+};

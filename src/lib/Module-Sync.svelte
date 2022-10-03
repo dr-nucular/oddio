@@ -1,10 +1,18 @@
 <script>
 import QRCode from 'qrcode'; // https://www.npmjs.com/package/qrcode
 import { onDestroy } from 'svelte';
-import { getServerTimestamp } from '../firebase.js';
+import { readDevice, createDevice, updateDeviceClock, updateDeviceSync } from '../firebase.js';
 import { sAuthInfo, sModules, sProject } from '../stores.js';
-import { delay, getDeviceId } from './utils';
+import { getDeviceId, setDeviceId } from './utils';
+import Oddio from '$lib/Oddio.js';
 
+/*
+import {
+	getFirestore, collection, query, where, orderBy, limit,
+	doc, getDoc, getDocs, addDoc, updateDoc, deleteDoc,
+	serverTimestamp, Timestamp
+} from "firebase/firestore";
+*/
 
 // subscription vars
 let authInfo = {};
@@ -15,18 +23,14 @@ let syncButton;
 let qrButton;
 let qrCanvas;
 let project;
-let latencyGuess = {
-	startedAt: null,
-	receivedAt: null,
-	finishedAt: null,
 
-	sendDurGuess: 1000,
-	sendDurActual: null,
-	returnDurGuess: 1000,
-	returnDurActual: null,
-	serverTimeGuess: null,
-	serverTimeActual: null,
-};
+const MAX_SYNC_BATCH_SIZE = 23;
+const MAX_CONSEC_SYNC_NO_IMP = 5;
+let bestClockDiff; // highest value obtained
+let fastestSyncDur;
+let adjClockOffset; // bestClockDiff + (fastestSyncDur * 0.5)
+
+
 
 // store subscriptions
 const unsubAuthInfo = sAuthInfo.subscribe(obj => authInfo = obj);
@@ -35,40 +39,69 @@ $: cssVarStyles = `--bgColor:${modules.sync?.bgColor}`;
 const unsubProject = sProject.subscribe(obj => project = obj);
 
 const startSync = async () => {
-	/*
-	project = { name: "Testttt", startTime: 0, endTime: 184.56789 };
-	sProject.set(project);
-	*/
-	const d = getDeviceId();
-	console.log(`>>> deviceId =`, d);
-
 	syncButton.innerText = "Syncing...";
 	syncButton.disabled = true;
 
-	const syncDur = await _syncRequest();
-	console.log(`... syncDur ${syncDur}`);
+	let deviceId = getDeviceId();
+	let deviceData;
+	if (deviceId) {
+		deviceData = await readDevice(deviceId); // TODO try/catch
+	}
+	if (!deviceData) {
+		deviceData = await createDevice();
+		deviceId = deviceData.id;
+		setDeviceId(deviceId);
+	}
 
+	// reset best values here...
+	bestClockDiff = undefined;
+	fastestSyncDur = undefined;
+	let numConsecNoImprovement = 0;
+	for (let i = 0; i < MAX_SYNC_BATCH_SIZE; i++) {
+		const syncResults = await _syncRequest();
+		let improvement = false;
+		if (bestClockDiff === undefined || syncResults.clockDiff > bestClockDiff) {
+			bestClockDiff = syncResults.clockDiff;
+			improvement = true;
+		}
+		if (fastestSyncDur === undefined || syncResults.syncDur < fastestSyncDur) {
+			fastestSyncDur = syncResults.syncDur;
+			improvement = true;
+		}
+		adjClockOffset = bestClockDiff + (fastestSyncDur * 0.5);
+		numConsecNoImprovement = improvement ? 0 : numConsecNoImprovement + 1;
+
+		console.log(`>> sync #${i+1}: clockDiff = ${syncResults.clockDiff}, syncDur = ${syncResults.syncDur}, adjClockOffset = ${adjClockOffset}`);
+
+		if (numConsecNoImprovement > 0) {
+			console.log(`--- no improvement`, numConsecNoImprovement);
+		}
+		if (numConsecNoImprovement >= MAX_CONSEC_SYNC_NO_IMP) break;
+	}
 	syncFinished();
 };
 
 const _syncRequest = async () => {
-	//if (!latencyGuess) {
-	//
-	//}
-	const startTime = performance.now();
-	//const ms = Math.random() * 1000; // 0 to 1 second
-	const syncDur = await getServerTimestamp().then((sts) => {
-		console.log(`>>> sts:`, sts);
-		const endTime = performance.now();
-		const d = endTime - startTime;
-		return d;
+	const deviceId = getDeviceId();
+	const syncData = await updateDeviceClock(deviceId).then((result) => {
+		return {
+			clockDiff: result.__clockDiff,
+			syncDur: result.__updateDur
+		};
 	});
-	return syncDur;
+	return syncData;
 };
 
+const syncFinished = async () => {
+	const deviceId = getDeviceId();
+	const ac = Oddio.getAC();
+	const data = {
+		clockOffset: adjClockOffset,
+		baseLatency: (ac.baseLatency || 0) * 1000,
+		outputLatency: (ac.outputLatency || 0) * 1000
+	};
+	await updateDeviceSync(deviceId, data);
 
-
-const syncFinished = () => {
 	syncButton.innerText = "Re-Sync";
 	syncButton.disabled = false;
 };

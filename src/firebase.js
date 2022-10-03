@@ -405,19 +405,99 @@ export const getServerTimestamp = async () => {
 	return sts;
 };
 
+export const readDevice = async (id) => {
+	try {
+		const collectionName = 'devices';
+		const docRef = doc(db, collectionName, id);
+		const docSnap = await getDoc(docRef);
+		if (docSnap.exists()) {
+			console.log(`readContent (id: ${id}):`, docSnap.data());
+			return docSnap;
+		} else {
+			throw `No such document with id: ${id}!`;
+		}
+	} catch (err) {
+		console.error(`readDevice ERROR: ${err}`);
+	}
+};
+export const createDevice = async () => {
+	try {
+		const collectionName = 'devices';
+		const user = firebaseCurrentUser(true);
+		const ts = serverTimestamp();
+		const docSnap = await addDoc(collection(db, collectionName), {
+			createdAt: ts,
+			createdBy: user.uid,
+			//updatedAt: undefined,
+			//clockOffset: undefined,
+			//groupSession: undefined
+		});
+		console.log(`createDevice: New ${collectionName} doc created with id: ${docSnap.id}`);
+		return docSnap;
+	} catch (err) {
+		console.error(`createDevice ERROR: ${err}`);
+	}
+};
+export const updateDeviceClock = async (id) => {
+	try {
+		const collectionName = 'devices';
+		const docRef = doc(db, collectionName, id);
+		const clockAt = Date.now();
+		const startTimer = performance.now();
+		await updateDoc(docRef, {
+			updatedAt: serverTimestamp(),
+			serverAt: serverTimestamp(),
+			clockAt // make timestamp and convert from clockValue?
+		});
+		const endTimer = performance.now();
+		
+		console.log(`updateDeviceClock: doc id ${id} updated (dur ${endTimer - startTimer})`);
+		const docSnap = await getDoc(docRef);
+		const docData = docSnap.data();
+
+		docSnap.__clockDiff = clockAt - docData.updatedAt.toMillis();
+		docSnap.__updateDur = endTimer - startTimer;
+		return docSnap;
+	} catch (err) {
+		console.error(`updateDeviceClock ERROR: ${err}`);
+	}
+};
+export const updateDeviceSync = async (id, data) => {
+	// data may have any of: .clockOffset, .baseLatency, .outputLatency
+	try {
+		const collectionName = 'devices';
+		const docRef = doc(db, collectionName, id);
+		const updateObj = { updatedAt: serverTimestamp() };
+		if (typeof data.clockOffset === 'number') {
+			updateObj.clockOffset = data.clockOffset;
+		}
+		if (typeof data.baseLatency === 'number') {
+			updateObj.baseLatency = data.baseLatency;
+		}
+		if (typeof data.outputLatency === 'number') {
+			updateObj.outputLatency = data.outputLatency;
+		}
+		await updateDoc(docRef, updateObj);
+		console.log(`updateDeviceSync: doc id ${id} updated`);
+		return await getDoc(docRef);
+	} catch (err) {
+		console.error(`updateDeviceSync ERROR: ${err}`);
+	}
+};
+
 /*
-sesh table
+groupSessions table
 - createdAt
 - createdBy (userId)
 - updatedAt (last detail change)
 - detail (json)
 
-device table
+devices table
 - createdAt
 - createdBy (userId)
 - updatedAt (last change to sesh or tsDelta)
-- tsDelta (or tsOffset)
-- sesh (reference to sesh uid -- could be null/undefined if its stale)
+- clockOffset
+- groupSession (reference -- could be null/undefined if its stale)
 
 
 
