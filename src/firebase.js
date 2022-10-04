@@ -450,7 +450,7 @@ export const updateDeviceClock = async (id) => {
 			clockAt // make timestamp and convert from clockValue?
 		});
 		const endTimer = performance.now();
-		
+
 		console.log(`updateDeviceClock: doc id ${id} updated (dur ${endTimer - startTimer})`);
 		const docSnap = await getDoc(docRef);
 		const docData = docSnap.data();
@@ -463,7 +463,7 @@ export const updateDeviceClock = async (id) => {
 	}
 };
 export const updateDeviceSync = async (id, data) => {
-	// data may have any of: .clockOffset, .baseLatency, .outputLatency
+	// data may have any of: .clockOffset, .baseLatency, .outputLatency, .latencyAdjustment
 	try {
 		const collectionName = 'devices';
 		const docRef = doc(db, collectionName, id);
@@ -476,6 +476,9 @@ export const updateDeviceSync = async (id, data) => {
 		}
 		if (typeof data.outputLatency === 'number') {
 			updateObj.outputLatency = data.outputLatency;
+		}
+		if (typeof data.latencyAdjustment === 'number') {
+			updateObj.latencyAdjustment = data.latencyAdjustment;
 		}
 		await updateDoc(docRef, updateObj);
 		console.log(`updateDeviceSync: doc id ${id} updated`);

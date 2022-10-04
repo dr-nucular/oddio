@@ -2,7 +2,7 @@
 import QRCode from 'qrcode'; // https://www.npmjs.com/package/qrcode
 import { onDestroy } from 'svelte';
 import { readDevice, createDevice, updateDeviceClock, updateDeviceSync } from '../firebase.js';
-import { sAuthInfo, sModules, sProject } from '../stores.js';
+import { sAuthInfo, sModules, sProject, sSyncSettings } from '../stores.js';
 import { getDeviceId, setDeviceId } from './utils';
 import Oddio from '$lib/Oddio.js';
 
@@ -17,18 +17,24 @@ import {
 // subscription vars
 let authInfo = {};
 let modules = {};
+let syncSettings = {};
 
 // other states
 let syncButton;
+let latencyUpButton;
+let latencyDnButton;
 let qrButton;
 let qrCanvas;
 let project;
 
 const MAX_SYNC_BATCH_SIZE = 23;
 const MAX_CONSEC_SYNC_NO_IMP = 5;
+
 let bestClockDiff; // highest value obtained
 let fastestSyncDur;
 let adjClockOffset; // bestClockDiff + (fastestSyncDur * 0.5)
+
+
 
 
 
@@ -37,6 +43,7 @@ const unsubAuthInfo = sAuthInfo.subscribe(obj => authInfo = obj);
 const unsubModules = sModules.subscribe(obj => modules = obj);
 $: cssVarStyles = `--bgColor:${modules.sync?.bgColor}`;
 const unsubProject = sProject.subscribe(obj => project = obj);
+const unsubSyncSettings = sSyncSettings.subscribe(obj => syncSettings = obj);
 
 const startSync = async () => {
 	syncButton.innerText = "Syncing...";
@@ -93,17 +100,43 @@ const _syncRequest = async () => {
 };
 
 const syncFinished = async () => {
+	// update firestore
 	const deviceId = getDeviceId();
 	const ac = Oddio.getAC();
-	const data = {
+	const updatedData = {
 		clockOffset: adjClockOffset,
 		baseLatency: (ac.baseLatency || 0) * 1000,
 		outputLatency: (ac.outputLatency || 0) * 1000
 	};
-	await updateDeviceSync(deviceId, data);
+	await updateDeviceSync(deviceId, updatedData);
+
+	// update local store
+	// TODO: move local store setting to the firestore.js method???
+	const newSyncSettings = Object.assign({}, syncSettings, updatedData);
+	sSyncSettings.set(newSyncSettings);
 
 	syncButton.innerText = "Re-Sync";
 	syncButton.disabled = false;
+};
+
+const nudgeLatency = async (value) => {
+	latencyDnButton.disabled = true;
+	latencyUpButton.disabled = true;
+
+	// update firestore
+	const deviceId = getDeviceId();
+	const updatedData = {
+		latencyAdjustment: (syncSettings?.latencyAdjustment || 0) + value
+	};
+	await updateDeviceSync(deviceId, updatedData);
+
+	// update local store
+	// TODO: move local store setting to the firestore.js method???
+	const newSyncSettings = Object.assign({}, syncSettings, updatedData);
+	sSyncSettings.set(newSyncSettings);
+
+	latencyDnButton.disabled = false;
+	latencyUpButton.disabled = false;
 };
 
 
@@ -123,6 +156,7 @@ onDestroy(() => {
 	unsubAuthInfo();
 	unsubModules();
 	unsubProject();
+	unsubSyncSettings();
 });
 
 </script>
@@ -147,7 +181,19 @@ onDestroy(() => {
 	{/if}
 	<br/><br/>
 
-	<button on:click={startSync} bind:this={syncButton}>Sync Me</button><br/>
+	
+
+	<b>Sync Settings:</b>
+	<button on:click={startSync} bind:this={syncButton}>Sync Me</button>
+	<button on:click={() => nudgeLatency(-5)} bind:this={latencyDnButton}>-5ms</button>
+	<button on:click={() => nudgeLatency(5)} bind:this={latencyUpButton}>+5ms</button>
+
+		<ul>
+		<li>clock offset: {syncSettings?.clockOffset}</li>
+		<li>base latency: {syncSettings?.baseLatency}</li>
+		<li>output latency: {syncSettings?.outputLatency}</li>
+		<li>latency adjustment: {syncSettings?.latencyAdjustment}</li>
+		</ul>
 
 	<button on:click={generateQR} bind:this={qrButton}>Generate QRCode</button><br/>
 

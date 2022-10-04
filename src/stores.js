@@ -56,3 +56,11 @@ export let sBuffs = writable({});
 //////////////////////////////////////// 
 
 export let sProject = writable({});
+
+export let sSyncSettings = writable({
+	clockOffset: 0,
+	baseLatency: 0,
+	outputLatency: 0,
+	latencyAdjustment: 0,
+	lastUpdated: 0
+});
