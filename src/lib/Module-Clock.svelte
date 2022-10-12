@@ -1,7 +1,7 @@
 <script>
 	//import Visibility from '';
 	import { onMount, onDestroy } from 'svelte';
-	import { sModules, sAudioContextInfo, sActiveProjDocs, sBuffs, sProject } from '../stores.js';
+	import { sModules, sAudioContextInfo, sActiveProjDocs, sBuffs, sProject, sSyncSettings } from '../stores.js';
 	import Oddio from '$lib/Oddio.js';
 
 	// subscription vars
@@ -10,6 +10,7 @@
 	let activeProjDocs = {};
 	let buffsArray = [];
 	let project;
+	let syncSettings = {};
 
 	// other states
 	let frame;
@@ -18,6 +19,8 @@
 	let loadGraphButton;
 	let loadCompositionButton;
 	let compositionId;
+	let localClockValue;
+	let serverClockValue;
 
 	// store subscriptions
 	const unsubModules = sModules.subscribe(obj => modules = obj);
@@ -35,6 +38,7 @@
 		});
 	});
 	const unsubProject = sProject.subscribe(obj => project = obj);
+	const unsubSyncSettings = sSyncSettings.subscribe(obj => syncSettings = obj);
 
 
 
@@ -43,6 +47,12 @@
 		mTime = Oddio.getClock();
 		mTime.currentTimeRounded = mTime.currentTime.toFixed(2);
 		mTime.nowRounded = mTime.now.toFixed(1);
+
+		// new: clock values
+		const localNow = Date.now();
+		localClockValue = new Date(localNow).toISOString();
+		const serverNow = localNow - syncSettings.clockOffset;
+		serverClockValue = new Date(serverNow).toISOString();
 	};
 	const startLoop = () => {
 		if (!frame) {
@@ -195,6 +205,7 @@
 		unsubActiveProjDocs();
 		unsubBuffs();
 		unsubProject();
+		unsubSyncSettings();
 	});
 </script>
 
@@ -204,6 +215,19 @@
 	style={cssVarStyles}
 	class="content-module">
 	<h2>&starf;&nbsp; Clock &nbsp;&starf;</h2><hr/>
+
+	<b>Sync Settings:</b>
+		<ul>
+		<li>clock offset: {syncSettings?.clockOffset}</li>
+		<li>base latency: {syncSettings?.baseLatency}</li>
+		<li>output latency: {syncSettings?.outputLatency}</li>
+		<li>latency adjustment: {syncSettings?.latencyAdjustment}</li>
+		</ul>
+
+	Local clock: <b>{localClockValue}</b><br/><br/>
+	<h2>Server: <b>{serverClockValue}</b></h2><br/><br/>
+
+	<hr/>
 
 	<div class="buffs">
 		{#if buffsArray.length}
@@ -227,6 +251,7 @@
 			No buffs
 		{/if}
 	</div>
+
 
 	Project: {project?.name}<br/><br/>
 

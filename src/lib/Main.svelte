@@ -5,6 +5,7 @@
 	import ProjectsModule from '$lib/Module-Projects.svelte';
 	import ClockModule from '$lib/Module-Clock.svelte';
 	import SyncModule from '$lib/Module-Sync.svelte';
+	import GroupSessionModule from '$lib/Module-GroupSession.svelte';
 
 	let modules = {};
 
@@ -32,6 +33,8 @@
 	<ClockModule/>
 {/if}
 
-
+{#if modules.groupSession?.visible}
+	<GroupSessionModule/>
+{/if}
 
 

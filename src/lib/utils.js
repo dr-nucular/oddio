@@ -21,9 +21,7 @@ export const delay = (ms) => {
 
 export const getDeviceId = () => {
 	/*
-	Could check firestore 'device' table, ensure it's fresh enough to use, regen if needed.
-	device table would have userId, createdAt, updatedAt, localClockOffset, audio latencies, etc
-	*/
+	OLD:
 	let deviceId = window.localStorage.getItem('deviceId');
 	if (!deviceId) {
 		deviceId = uuidv4();
@@ -31,7 +29,16 @@ export const getDeviceId = () => {
 		window.localStorage.setItem('deviceId', deviceId);
 	}
 	return deviceId;
+	*/
+	return window.localStorage.getItem('deviceId');
 };
 export const setDeviceId = (id) => {
 	window.localStorage.setItem('deviceId', id);
+};
+
+export const getGroupSessionId = () => {
+	return window.localStorage.getItem('groupSessionId');
+};
+export const setGroupSessionId = (id) => {
+	window.localStorage.setItem('groupSessionId', id);
 };

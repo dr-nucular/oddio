@@ -1,7 +1,7 @@
 <script>
 import QRCode from 'qrcode'; // https://www.npmjs.com/package/qrcode
 import { onDestroy } from 'svelte';
-import { readDevice, createDevice, updateDeviceClock, updateDeviceSync } from '../firebase.js';
+import { dbGetDevice, dbCreateDevice, dbUpdateDeviceClock, dbUpdateDeviceSync } from '../firebase.js';
 import { sAuthInfo, sModules, sProject, sSyncSettings } from '../stores.js';
 import { getDeviceId, setDeviceId } from './utils';
 import Oddio from '$lib/Oddio.js';
@@ -52,10 +52,10 @@ const startSync = async () => {
 	let deviceId = getDeviceId();
 	let deviceData;
 	if (deviceId) {
-		deviceData = await readDevice(deviceId); // TODO try/catch
+		deviceData = await dbGetDevice(deviceId); // TODO try/catch
 	}
 	if (!deviceData) {
-		deviceData = await createDevice();
+		deviceData = await dbCreateDevice();
 		deviceId = deviceData.id;
 		setDeviceId(deviceId);
 	}
@@ -90,7 +90,7 @@ const startSync = async () => {
 
 const _syncRequest = async () => {
 	const deviceId = getDeviceId();
-	const syncData = await updateDeviceClock(deviceId).then((result) => {
+	const syncData = await dbUpdateDeviceClock(deviceId).then((result) => {
 		return {
 			clockDiff: result.__clockDiff,
 			syncDur: result.__updateDur
@@ -108,7 +108,7 @@ const syncFinished = async () => {
 		baseLatency: (ac.baseLatency || 0) * 1000,
 		outputLatency: (ac.outputLatency || 0) * 1000
 	};
-	await updateDeviceSync(deviceId, updatedData);
+	await dbUpdateDeviceSync(deviceId, updatedData);
 
 	// update local store
 	// TODO: move local store setting to the firestore.js method???
@@ -128,7 +128,7 @@ const nudgeLatency = async (value) => {
 	const updatedData = {
 		latencyAdjustment: (syncSettings?.latencyAdjustment || 0) + value
 	};
-	await updateDeviceSync(deviceId, updatedData);
+	await dbUpdateDeviceSync(deviceId, updatedData);
 
 	// update local store
 	// TODO: move local store setting to the firestore.js method???

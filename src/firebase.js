@@ -397,30 +397,33 @@ export const deleteProject = async (id) => {
 };
 
 
+
+
+
+
+
+
+
+
 //////////
 // SYNC //
 //////////
-export const getServerTimestamp = async () => {
-	const sts = await serverTimestamp();
-	return sts;
-};
-
-export const readDevice = async (id) => {
+export const dbGetDevice = async (id) => {
 	try {
 		const collectionName = 'devices';
 		const docRef = doc(db, collectionName, id);
 		const docSnap = await getDoc(docRef);
 		if (docSnap.exists()) {
-			console.log(`readContent (id: ${id}):`, docSnap.data());
+			console.log(`dbGetDevice (id: ${id}):`, docSnap.data());
 			return docSnap;
 		} else {
-			throw `No such document with id: ${id}!`;
+			throw `No document with id: ${id}!`;
 		}
 	} catch (err) {
-		console.error(`readDevice ERROR: ${err}`);
+		console.error(`dbGetDevice ERROR: ${err}`);
 	}
 };
-export const createDevice = async () => {
+export const dbCreateDevice = async () => {
 	try {
 		const collectionName = 'devices';
 		const user = firebaseCurrentUser(true);
@@ -432,13 +435,13 @@ export const createDevice = async () => {
 			//clockOffset: undefined,
 			//groupSession: undefined
 		});
-		console.log(`createDevice: New ${collectionName} doc created with id: ${docSnap.id}`);
+		console.log(`dbCreateDevice: New ${collectionName} doc created with id: ${docSnap.id}`);
 		return docSnap;
 	} catch (err) {
-		console.error(`createDevice ERROR: ${err}`);
+		console.error(`dbCreateDevice ERROR: ${err}`);
 	}
 };
-export const updateDeviceClock = async (id) => {
+export const dbUpdateDeviceClock = async (id) => {
 	try {
 		const collectionName = 'devices';
 		const docRef = doc(db, collectionName, id);
@@ -451,7 +454,7 @@ export const updateDeviceClock = async (id) => {
 		});
 		const endTimer = performance.now();
 
-		console.log(`updateDeviceClock: doc id ${id} updated (dur ${endTimer - startTimer})`);
+		console.log(`dbUpdateDeviceClock: doc id ${id} updated (dur ${endTimer - startTimer})`);
 		const docSnap = await getDoc(docRef);
 		const docData = docSnap.data();
 
@@ -459,10 +462,10 @@ export const updateDeviceClock = async (id) => {
 		docSnap.__updateDur = endTimer - startTimer;
 		return docSnap;
 	} catch (err) {
-		console.error(`updateDeviceClock ERROR: ${err}`);
+		console.error(`dbUpdateDeviceClock ERROR: ${err}`);
 	}
 };
-export const updateDeviceSync = async (id, data) => {
+export const dbUpdateDeviceSync = async (id, data) => {
 	// data may have any of: .clockOffset, .baseLatency, .outputLatency, .latencyAdjustment
 	try {
 		const collectionName = 'devices';
@@ -481,12 +484,95 @@ export const updateDeviceSync = async (id, data) => {
 			updateObj.latencyAdjustment = data.latencyAdjustment;
 		}
 		await updateDoc(docRef, updateObj);
-		console.log(`updateDeviceSync: doc id ${id} updated`);
+		console.log(`dbUpdateDeviceSync: doc id ${id} updated`);
 		return await getDoc(docRef);
 	} catch (err) {
-		console.error(`updateDeviceSync ERROR: ${err}`);
+		console.error(`dbUpdateDeviceSync ERROR: ${err}`);
 	}
 };
+
+
+export const dbGetGroupSession = async (id) => {
+	try {
+		const collectionName = 'groupSessions';
+		const docRef = doc(db, collectionName, id);
+		const docSnap = await getDoc(docRef);
+		if (docSnap.exists()) {
+			console.log(`dbGetGroupSession (id: ${id}):`, docSnap.data());
+			return docSnap;
+		} else {
+			throw `No document with id: ${id}!`;
+		}
+	} catch (err) {
+		console.error(`dbGetGroupSession ERROR: ${err}`);
+	}
+};
+export const dbCreateGroupSession = async () => {
+	try {
+		const collectionName = 'groupSessions';
+		const user = firebaseCurrentUser(true);
+		const ts = serverTimestamp();
+		const docSnap = await addDoc(collection(db, collectionName), {
+			createdAt: ts,
+			createdBy: user.uid,
+			updatedAt: ts,
+			//detail: undefined
+		});
+		console.log(`dbCreateGroupSession: New ${collectionName} doc created with id: ${docSnap.id}`);
+		return docSnap;
+	} catch (err) {
+		console.error(`dbCreateGroupSession ERROR: ${err}`);
+	}
+};
+// TODO: this query may change to be more like "get all recent sessions that i created or joined"
+export const dbQueryGroupSessions = async (limitNum = 100, offset = 0) => {
+	try {
+		const user = firebaseCurrentUser(true);
+		const q = query(collection(db, 'groupSessions'), where('createdBy', '==', user.uid), orderBy('updatedAt', 'desc'), limit(limitNum));
+		const querySnap = await getDocs(q);
+		const results = [];
+		querySnap.forEach((docSnap) => {
+			//console.log(`${docSnap.id} => ${JSON.stringify(docSnap.data(), null, 2)}`);
+			results.push(docSnap);
+			/*
+			results.push({
+				id: docSnap.id,
+				data: docSnap.data()
+			});
+			*/
+		});
+		console.log(`dbQueryGroupSessions: ${results.length} documents`);
+		return results;
+	} catch (err) {
+		console.error(`dbQueryGroupSessions ERROR: ${err}`);
+	}
+};
+
+export const dbQueryGroupSessionDevices = async (groupSessionId, limitNum = 100, offset = 0) => {
+	try {
+		//const user = firebaseCurrentUser(true);
+		const q = query(collection(db, 'devices'), where('groupSession', '==', groupSessionId), orderBy('updatedAt', 'desc'), limit(limitNum));
+		const querySnap = await getDocs(q);
+		const results = [];
+		querySnap.forEach((docSnap) => {
+			//console.log(`${docSnap.id} => ${JSON.stringify(docSnap.data(), null, 2)}`);
+			results.push(docSnap);
+			/*
+			results.push({
+				id: docSnap.id,
+				data: docSnap.data()
+			});
+			*/
+		});
+		console.log(`dbQueryGroupSessionDevices: ${results.length} documents`);
+		return results;
+	} catch (err) {
+		console.error(`dbQueryGroupSessionDevices ERROR: ${err}`);
+	}
+};
+
+
+
 
 /*
 groupSessions table

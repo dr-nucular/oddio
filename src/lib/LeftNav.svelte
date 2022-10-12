@@ -7,6 +7,7 @@
 	export let showProjects = false;
 	export let showClock = false;
 	export let showSync = false;
+	export let showGroupSession = false;
 
 	// subscription vars
 	let notLoggedIn = true;
@@ -35,6 +36,8 @@
 <MagicButton text="Sync" color="#ccaa88" moduleName="sync" visible={showSync}/>
 <br/>
 <MagicButton text="Clock" color="#88cccc" moduleName="clock" visible={showClock}/>
+<br/>
+<MagicButton text="Group Session" color="#8888cc" moduleName="groupSession" visible={showGroupSession}/>
 <br/>
 
 <style>
