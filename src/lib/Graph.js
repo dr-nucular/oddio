@@ -409,7 +409,7 @@ class Voice {
 				// PLAY params: sound, when, delay, offset, duration
 				
 				if (params.sound) nodeInfo.sound = params.sound; // override
-				let when = (params.when !== undefined) ? params.when : this.ac.currentTime;
+				let when = params.when ?? this.ac.currentTime;
 				if (params.delay) when += params.delay;
 				const offset = params.offset || 0.0;
 				const duration = params.duration || undefined;
@@ -452,7 +452,7 @@ class Voice {
 			//console.log("PLAY: oscillator node:", nodeName);
 			// PLAY params: when, delay
 			
-			let when = (params.when !== undefined) ? params.when : this.ac.currentTime;
+			let when = params.when ?? this.ac.currentTime;
 			if (params.delay) when += params.delay;
 
 			// current nodes, if they're defined, may be busy at the moment, so...
@@ -491,7 +491,7 @@ class Voice {
 				//console.log("STOP: source node:", nodeName);
 
 				// STOP params: when, delay
-				let when = (params.when !== undefined) ? params.when : this.ac.currentTime;
+				let when = params.when ?? this.ac.currentTime;
 				if (params.delay) when += params.delay;
 
 				// current nodes, if they're defined, may be busy at the moment, so...
@@ -505,7 +505,7 @@ class Voice {
 			//console.log("STOP: oscillator node:", nodeName);
 
 			// STOP params: when, delay
-			let when = (params.when !== undefined) ? params.when : this.ac.currentTime;
+			let when = params.when ?? this.ac.currentTime;
 			if (params.delay) when += params.delay;
 
 			// current nodes, if they're defined, may be busy at the moment, so...
@@ -520,10 +520,11 @@ class Voice {
 	_set(nodeName, nodeInfo, params) {
 		DEBUG && console.log('ODDIO SET: nodeName:', nodeName, 'nodeInfo:', nodeInfo, 'params:', params);
 
-		// general params for basically any audioNode:
-		const delay = params.delay || 0;
+		// general SET params: when, delay, ramp
+		let when = params.when ?? this.ac.currentTime;
+		if (params.delay) when += params.delay;
 		const ramp = params.ramp || 0;
-		const set_time = this.ac.currentTime + delay;
+		delete params.when;
 		delete params.delay;
 		delete params.ramp;
 
@@ -550,18 +551,18 @@ class Voice {
 				} else if (p === 'playbackRate') {
 					nodeInfo._props.playbackRate = params[p];
 					if (nodeInfo._source_node) {
-						nodeInfo._source_node.playbackRate.cancelScheduledValues(set_time);
+						nodeInfo._source_node.playbackRate.cancelScheduledValues(when);
 						if (ramp === 0) {
 							/**
 							This line was present in the past -- correctly or not?  TODO: test more use cases and
 							make sure things work properly without this line:
 							//nodeInfo._source_node.playbackRate.value = nodeInfo._props.playbackRate;
 							*/
-							nodeInfo._source_node.playbackRate.setValueAtTime(nodeInfo._props.playbackRate, set_time);
+							nodeInfo._source_node.playbackRate.setValueAtTime(nodeInfo._props.playbackRate, when);
 						} else {
 							nodeInfo._source_node.playbackRate.setTargetAtTime(
 								nodeInfo._props.playbackRate,
-								set_time,
+								when,
 								ramp
 							);
 						}
@@ -575,31 +576,31 @@ class Voice {
 				if (p === 'frequency') {
 					nodeInfo._props.frequency = params[p];
 					if (nodeInfo._source_node) {
-						nodeInfo._source_node.frequency.cancelScheduledValues(set_time);
+						nodeInfo._source_node.frequency.cancelScheduledValues(when);
 						if (ramp === 0) {
 							/**
 							This line was present in the past -- correctly or not?  TODO: test more use cases and
 							make sure things work properly without this line:
 							//nodeInfo._source_node.frequency.value = nodeInfo._props.frequency;
 							*/
-							nodeInfo._source_node.frequency.setValueAtTime(nodeInfo._props.frequency, set_time);
+							nodeInfo._source_node.frequency.setValueAtTime(nodeInfo._props.frequency, when);
 						} else {
-							nodeInfo._source_node.frequency.setTargetAtTime(nodeInfo._props.frequency, set_time, ramp);
+							nodeInfo._source_node.frequency.setTargetAtTime(nodeInfo._props.frequency, when, ramp);
 						}
 					}
 				} else if (p === 'detune') {
 					nodeInfo._props.detune = params[p];
 					if (nodeInfo._source_node) {
-						nodeInfo._source_node.detune.cancelScheduledValues(set_time);
+						nodeInfo._source_node.detune.cancelScheduledValues(when);
 						if (ramp === 0) {
 							/**
 							This line was present in the past -- correctly or not?  TODO: test more use cases and
 							make sure things work properly without this line:
 							//nodeInfo._source_node.detune.value = nodeInfo._props.detune;
 							*/
-							nodeInfo._source_node.detune.setValueAtTime(nodeInfo._props.detune, set_time);
+							nodeInfo._source_node.detune.setValueAtTime(nodeInfo._props.detune, when);
 						} else {
-							nodeInfo._source_node.detune.setTargetAtTime(nodeInfo._props.detune, set_time, ramp);
+							nodeInfo._source_node.detune.setTargetAtTime(nodeInfo._props.detune, when, ramp);
 						}
 					}
 				} else {
@@ -631,16 +632,16 @@ class Voice {
 				if (p === 'gain') {
 					nodeInfo._props.gain = params[p];
 					if (nodeInfo._audio_node && !nodeInfo.mute) {
-						nodeInfo._audio_node.gain.cancelScheduledValues(set_time);
+						nodeInfo._audio_node.gain.cancelScheduledValues(when);
 						if (ramp === 0) {
 							/**
 							This line was present in the past -- correctly or not?  TODO: test more use cases and
 							make sure things work properly without this line:
 							//nodeInfo._audio_node.gain.value = nodeInfo._props.gain;
 							*/
-							nodeInfo._audio_node.gain.setValueAtTime(nodeInfo._props.gain, set_time);
+							nodeInfo._audio_node.gain.setValueAtTime(nodeInfo._props.gain, when);
 						} else {
-							nodeInfo._audio_node.gain.setTargetAtTime(nodeInfo._props.gain, set_time, ramp);
+							nodeInfo._audio_node.gain.setTargetAtTime(nodeInfo._props.gain, when, ramp);
 						}
 					}
 				} else if (p === 'gain_curve') {
@@ -653,17 +654,18 @@ class Voice {
 					}
 					nodeInfo._props.gain_curve = floater;
 					if (nodeInfo._audio_node && !nodeInfo.mute) {
-						nodeInfo._audio_node.gain.cancelScheduledValues(set_time);
+						nodeInfo._audio_node.gain.cancelScheduledValues(when);
 						if (ramp > 0) {
-							nodeInfo._audio_node.gain.setValueCurveAtTime(nodeInfo._props.gain_curve, set_time, ramp);
+							nodeInfo._audio_node.gain.setValueCurveAtTime(nodeInfo._props.gain_curve, when, ramp);
 						} else {
-							console.warn(`Voice._set(): can't schedule volume curve without ramp duration provided`);
+							console.warn(`Voice._set(): can't schedule volume curve without ramp duration provided, setting to final curve value ${floater[floater_len - 1]} at time ${when}`);
+							nodeInfo._audio_node.gain.setValueAtTime(floater[floater_len - 1], when);
 						}
 					}
 				} else if (p === 'mute') {
 					nodeInfo._props.mute = params[p];
 					if (nodeInfo._audio_node) {
-						nodeInfo._audio_node.gain.cancelScheduledValues(set_time);
+						nodeInfo._audio_node.gain.cancelScheduledValues(when);
 						if (ramp === 0) {
 							if (nodeInfo._props.mute) {
 								/**
@@ -671,20 +673,20 @@ class Voice {
 								make sure things work properly without this line:
 								//nodeInfo._audio_node.gain.value = 0.0;
 								*/
-								nodeInfo._audio_node.gain.setValueAtTime(0.0, set_time);
+								nodeInfo._audio_node.gain.setValueAtTime(0.0, when);
 							} else {
 								/**
 								This line was present in the past -- correctly or not?  TODO: test more use cases and
 								make sure things work properly without this line:
 								//nodeInfo._audio_node.gain.value = nodeInfo._props.gain;
 								*/
-								nodeInfo._audio_node.gain.setValueAtTime(nodeInfo._props.gain, set_time);
+								nodeInfo._audio_node.gain.setValueAtTime(nodeInfo._props.gain, when);
 							}
 						} else {
 							if (nodeInfo._props.mute) {
-								nodeInfo._audio_node.gain.setTargetAtTime(0.0, set_time, ramp);
+								nodeInfo._audio_node.gain.setTargetAtTime(0.0, when, ramp);
 							} else {
-								nodeInfo._audio_node.gain.setTargetAtTime(nodeInfo._props.gain, set_time, ramp);
+								nodeInfo._audio_node.gain.setTargetAtTime(nodeInfo._props.gain, when, ramp);
 							}
 						}
 					}
@@ -697,16 +699,16 @@ class Voice {
 				if (p === 'delayTime') {
 					nodeInfo._props.delayTime = params[p];
 					if (nodeInfo._audio_node) {
-						nodeInfo._audio_node.delayTime.cancelScheduledValues(set_time);
+						nodeInfo._audio_node.delayTime.cancelScheduledValues(when);
 						if (ramp === 0) {
 							/**
 							This line was present in the past -- correctly or not?  TODO: test more use cases and
 							make sure things work properly without this line:
 							//nodeInfo._audio_node.delayTime.value = nodeInfo._props.delayTime;
 							*/
-							nodeInfo._audio_node.delayTime.setValueAtTime(nodeInfo._props.delayTime, set_time);
+							nodeInfo._audio_node.delayTime.setValueAtTime(nodeInfo._props.delayTime, when);
 						} else {
-							nodeInfo._audio_node.delayTime.setTargetAtTime(nodeInfo._props.delayTime, set_time, ramp);
+							nodeInfo._audio_node.delayTime.setTargetAtTime(nodeInfo._props.delayTime, when, ramp);
 						}
 					}
 				} else {
@@ -736,46 +738,46 @@ class Voice {
 				if (p === 'gain') {
 					nodeInfo._props.gain = params[p];
 					if (nodeInfo._audio_node) {
-						nodeInfo._audio_node.gain.cancelScheduledValues(set_time);
+						nodeInfo._audio_node.gain.cancelScheduledValues(when);
 						if (ramp === 0) {
 							/**
 							This line was present in the past -- correctly or not?  TODO: test more use cases and
 							make sure things work properly without this line:
 							//nodeInfo._audio_node.gain.value = nodeInfo._props.gain;
 							*/
-							nodeInfo._audio_node.gain.setValueAtTime(nodeInfo._props.gain, set_time);
+							nodeInfo._audio_node.gain.setValueAtTime(nodeInfo._props.gain, when);
 						} else {
-							nodeInfo._audio_node.gain.setTargetAtTime(nodeInfo._props.gain, set_time, ramp);
+							nodeInfo._audio_node.gain.setTargetAtTime(nodeInfo._props.gain, when, ramp);
 						}
 					}
 				} else if (p === 'frequency') {
 					nodeInfo._props.frequency = params[p];
 					if (nodeInfo._audio_node) {
-						nodeInfo._audio_node.frequency.cancelScheduledValues(set_time);
+						nodeInfo._audio_node.frequency.cancelScheduledValues(when);
 						if (ramp === 0) {
 							/**
 							This line was present in the past -- correctly or not?  TODO: test more use cases and
 							make sure things work properly without this line:
 							//nodeInfo._audio_node.frequency.value = nodeInfo._props.frequency;
 							*/
-							nodeInfo._audio_node.frequency.setValueAtTime(nodeInfo._props.frequency, set_time);
+							nodeInfo._audio_node.frequency.setValueAtTime(nodeInfo._props.frequency, when);
 						} else {
-							nodeInfo._audio_node.frequency.setTargetAtTime(nodeInfo._props.frequency, set_time, ramp);
+							nodeInfo._audio_node.frequency.setTargetAtTime(nodeInfo._props.frequency, when, ramp);
 						}
 					}
 				} else if (p === 'Q') {
 					nodeInfo._props.Q = params[p];
 					if (nodeInfo._audio_node) {
-						nodeInfo._audio_node.Q.cancelScheduledValues(set_time);
+						nodeInfo._audio_node.Q.cancelScheduledValues(when);
 						if (ramp === 0) {
 							/**
 							This line was present in the past -- correctly or not?  TODO: test more use cases and
 							make sure things work properly without this line:
 							//nodeInfo._audio_node.Q.value = nodeInfo._props.Q;
 							*/
-							nodeInfo._audio_node.Q.setValueAtTime(nodeInfo._props.Q, set_time);
+							nodeInfo._audio_node.Q.setValueAtTime(nodeInfo._props.Q, when);
 						} else {
-							nodeInfo._audio_node.Q.setTargetAtTime(nodeInfo._props.Q, set_time, ramp);
+							nodeInfo._audio_node.Q.setTargetAtTime(nodeInfo._props.Q, when, ramp);
 						}
 					}
 				} else {
