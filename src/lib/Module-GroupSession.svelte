@@ -47,10 +47,10 @@ const createGroupSession = async () => {
 
 const generateQR = async () => {
 	try {
-		const url = "hello world?";
+		const url = `${window.location.href}/?gsid=abcde&peerId=12345`; // TODO: remove peerId
 		const result = await QRCode.toCanvas(qrCanvas, url);
 		qrCanvas.style.display = 'block';
-		console.log(result);
+		//console.log(result);
 	} catch (err) {
 		console.error(err);
 	}
@@ -124,9 +124,6 @@ onDestroy(() => {
 	}
 	h2 {
 		margin: 0 0 12px;
-	}
-	a {
-		cursor: pointer;
 	}
 	canvas {
 		display: none;

@@ -42,3 +42,19 @@ export const getGroupSessionId = () => {
 export const setGroupSessionId = (id) => {
 	window.localStorage.setItem('groupSessionId', id);
 };
+
+export const getUrlParams = () => {
+	const urlParams = {};
+	let match;
+	const pl = /\+/g;
+	const search = /([^&=]+)=?([^&]*)/g;
+	const decode = function (s) {
+		return decodeURIComponent(s.replace(pl, ' '));
+	};
+	const query = window.location.search.substring(1);
+	// eslint-disable-next-line no-cond-assign
+	while ((match = search.exec(query)) !== null) {
+		urlParams[decode(match[1])] = decode(match[2]);
+	}
+	return urlParams;
+};
