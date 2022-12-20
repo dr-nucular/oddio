@@ -1,7 +1,7 @@
 <script>
 	import QRCode from 'qrcode'; // https://www.npmjs.com/package/qrcode
 	import { onDestroy } from 'svelte';
-	import { sModules } from '../stores.js';
+	import { sAuthInfo, sModules } from '../stores.js';
 	import { getUrlParams } from './utils.js';
 	let Peer;
 	if (typeof navigator !== "undefined") {
@@ -11,16 +11,18 @@
 	}
 
 	// subscription vars
+	let authInfo = {};
 	let modules = {};
+	
 
 	// other states
 	const hostPeerId = 'yay';
 	const controllerPeerId = '';
-	let peer;
+	let peerSelf;
 	let qrCanvas;
 	let priPeerButton;
 	let secPeerButton;
-	let sendMsgButton;
+
 
 	let isGameHost = false;
 	let outConns = [];
@@ -30,6 +32,7 @@
 
 
 	// store subscriptions
+	const unsubAuthInfo = sAuthInfo.subscribe(obj => authInfo = obj);
 	const unsubModules = sModules.subscribe(obj => modules = obj);
 	$: cssVarStyles = `--bgColor:${modules.peers?.bgColor}`;
 
@@ -38,9 +41,9 @@
 			consoley(`Peer lib not imported, bail.`);
 			return;
 		}
-		if (!peer) {
+		if (!peerSelf) {
 			const peerId = gameHost ? hostPeerId : controllerPeerId;
-			peer = new Peer(peerId, {
+			peerSelf = new Peer(peerId, {
 				host: window.location.hostname,
 				port: 9000,
 				path: '/peerserver',
@@ -50,8 +53,8 @@
 				//	{ url: 'turn:homeo@turn.bistri.com:80', credential: 'homeo' }
 				//] },
 			});
-			peer.on('open', (id) => {
-				consoley(`*** peer created (gameHost=${gameHost}): ${id}`);
+			peerSelf.on('open', (id) => {
+				consoley(`*** peerSelf created (gameHost=${gameHost}): ${id}`);
 				if (gameHost) {
 					priPeerButton.innerText = `${id}`;
 					isGameHost = true;
@@ -62,78 +65,103 @@
 					secPeerButton.innerText = `${id}`;
 
 					// if controller, connect to gameHost and send a hello msg
-					establishConnection(hostPeerId);
+					createOutConn(hostPeerId, {
+						toPeerType: 'host',
+						toPeerEmail: 'no clue',
+					});
 				}
 			});
-			peer.on('connection', (conn) => {
-				consoley(`*** peer connected (gameHost=${gameHost})`);
+			peerSelf.on('connection', (conn) => {
+				consoley(`*** inConn initiated (gameHost=${gameHost}) by ${conn.peer}`);
 				//console.log(`inconn keys`, Object.keys(conn));
 				//console.log(`inconn peer`, conn.peer);
 				conn.on('open', () => {
-					consoley(`*** connection opened (gameHost=${gameHost}) by peer`);
+					consoley(`*** inConn opened (gameHost=${gameHost}) by ${conn.peer}`);
 					inConns.push(conn);
 					inConns = inConns; // trigger reactivity
-					//if (gameHost) {
-						// if gameHost received the connection, establish outConn and say hello back
-						establishConnection(conn.peer);
-					//}
-					//else {
-					//	consoley(`>>> controller NOT sending msg`);
-					//}
+
+					// TODO: update outConn of same peerId with updated toPeerType/Email etc... 
+					// this is the use case where host replies back with info about itself
+
+					// establish outConn and say hello back
+					createOutConn(conn.peer, {
+						toPeerType: conn.metadata.fromPeerType || 'unknown',
+						toPeerEmail: conn.metadata.fromPeerEmail || 'unknown',
+					});
 				});
 				conn.on('data', (data) => {
-					consoley(`<<< msg received (gameHost=${gameHost}): ${data}`);
+					consoley(`<<< data received from ${conn.peer} (gameHost=${gameHost}): ${data}`);
 				});
 				conn.on('error', (err) => {
-					consoley(`*** inConn error (gameHost=${gameHost}): ${err}`);
+					consoley(`!!! inConn error (peer ${conn.peer}) (gameHost=${gameHost}): ${err}`);
 				});
 			});
-			peer.on('error', (err) => {
-				consoley(`*** peer error (gameHost=${gameHost}): ${err}`);
-				peer = undefined;
+			peerSelf.on('error', (err) => {
+				consoley(`!!! peerSelf error (gameHost=${gameHost}): ${err}`);
+				peerSelf = undefined;
 			});
 		} else {
-			consoley(`*** peer ALREADY created (gameHost=${gameHost})`);
+			consoley(`*** peerSelf ALREADY created (gameHost=${gameHost})`);
 		}
 
 	};
 
 
-	const establishConnection = (peerId) => {
-		const curConnectedPeerIds = outConns.map(conn => conn.peer);
-		const idx = curConnectedPeerIds.indexOf(peerId);
-		if (idx > -1) {
-			consoley(`*** outConn ALREADY established from ${peer.id} to ${peerId}`);
+	const createOutConn = (peerId, toMetadata) => {
+		if (peerId === peerSelf.id) {
+			consoley(`*** outConn CAN'T be established from/to self`);
 			return;
 		}
 
-		const conn = peer.connect(peerId);
+		const curConnectedPeerIds = outConns.map(conn => conn.peer);
+		const idx = curConnectedPeerIds.indexOf(peerId);
+		if (idx > -1) {
+			consoley(`*** outConn ALREADY established from ${peerSelf.id} to ${peerId}`);
+			return;
+		}
+
+		const fromMetadata = {
+			fromPeerType: isGameHost ? 'host' : 'controller',
+			fromPeerEmail: authInfo.email,
+		};
+		const metadata = Object.assign(fromMetadata, toMetadata);
+		const conn = peerSelf.connect(peerId, {
+			metadata,
+			//label: 'needs to be unique',
+			//serialization: 'binary',
+			//reliable: false,
+		});
 		conn.on('open', () => {
-			consoley(`*** outConn established from ${peer.id} to ${peerId}`);
+			consoley(`*** outConn established from ${peerSelf.id} to ${peerId}`);
 			outConns.push(conn);
 			outConns = outConns; // trigger reactivity
 
 			// send hello msg
-			const openMsg = `Hi ${peerId}, this is ${peer.id}`;
-			consoley(`>>> ${peer.id} sending hello msg to ${peerId}: ${openMsg}`);
+			const openMsg = `Hi ${peerId}, this is ${peerSelf.id}`;
+			consoley(`>>> ${peerSelf.id} sending hello msg to ${peerId}: ${openMsg}`);
 			conn.send(openMsg);
 		});
 		conn.on('error', (err) => {
-			consoley(`!!! outConn NOT established from ${peer.id} to ${peerId}: ${err}`);
+			consoley(`!!! outConn NOT established from ${peerSelf.id} to ${peerId}: ${err}`);
 		});
 
 	};
 
-	const sendMsg = () => {
-		//if (isGameHost) {
-		//	consoley(`XXX gameHost can't send msg to self`);
-		//	return;
-		//}
-		const helloMsg = `hi again!`;
+	const sendMsg = (peerId) => {
+		// send to all if peerId is falsy
+		const helloMsg = `Hi from ${peerSelf.id}`;
 		outConns.forEach(conn => {
-			consoley(`>>> sending msg (isGameHost=${isGameHost}): ${helloMsg}`);
-			conn.send(helloMsg);
+			if (!peerId || conn.peer === peerId) {
+				consoley(`>>> sending msg to ${conn.peer}: ${helloMsg}`);
+				conn.send(helloMsg);
+			}
 		});
+	};
+
+	const sendMsgByConn = (conn) => {
+		const helloMsg = `Hi from ${peerSelf.id}`;
+		consoley(`>>> sending msg to ${conn.peer}: ${helloMsg}`);
+		conn.send(helloMsg);
 	};
 
 	const generateUriForPeers = async () => {
@@ -156,6 +184,7 @@
 
 
 	onDestroy(() => {
+		unsubAuthInfo();
 		unsubModules();
 	});
 
@@ -186,12 +215,12 @@
 		<ul>
 		{#each inConns as conn}
 			<li>
-				{conn.peer}
+				{conn.peer} ({conn.metadata.fromPeerType})
 			</li>
 		{/each}
 		</ul>
 	{:else}
-		There are {inConns?.length} inbound peer connections.<br/><br/>
+		There are no inbound peer connections.<br/><br/>
 	{/if}
 	
 	{#if outConns?.length}
@@ -199,15 +228,15 @@
 		<ul>
 		{#each outConns as conn}
 			<li>
-				{conn.peer}
+				{conn.peer} ({conn.metadata.toPeerType}) <button on:click={() => sendMsgByConn(conn)}>Send Message</button>
 			</li>
 		{/each}
 		</ul>
 	{:else}
-		There are {outConns?.length} outbound peer connections.<br/><br/>
+		There are no outbound peer connections.<br/><br/>
 	{/if}
 
-	<button on:click={sendMsg} bind:this={sendMsgButton}>Send Message to all outConns</button><br/>
+	<button on:click={() => sendMsg()}>Send Message to all outConns</button><br/>
 	<textarea id="peerFeedback" bind:value={peerFeedbackData} /><br/>
 </div>
 
