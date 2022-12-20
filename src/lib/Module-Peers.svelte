@@ -66,8 +66,8 @@
 
 					// if controller, connect to gameHost and send a hello msg
 					createOutConn(hostPeerId, {
-						toPeerType: 'host',
-						toPeerEmail: 'no clue',
+						toPeerType: undefined,
+						toAuthInfo: undefined,
 					});
 				}
 			});
@@ -85,8 +85,8 @@
 
 					// establish outConn and say hello back
 					createOutConn(conn.peer, {
-						toPeerType: conn.metadata.fromPeerType || 'unknown',
-						toPeerEmail: conn.metadata.fromPeerEmail || 'unknown',
+						toPeerType: conn.metadata.fromPeerType,
+						toAuthInfo: JSON.parse(JSON.stringify(conn.metadata.fromAuthInfo)),
 					});
 				});
 				conn.on('data', (data) => {
@@ -113,18 +113,31 @@
 			return;
 		}
 
+		const existingOutConn = outConns.find(conn => conn.peer === peerId);
+		if (existingOutConn) {
+			consoley(`*** outConn ALREADY established from ${peerSelf.id} to ${peerId}; updating metadata`);
+
+			// assign toMetadata into the conn's metadata
+			const toMetadataCloned = JSON.parse(JSON.stringify(toMetadata));
+			existingOutConn.metadata = Object.assign(existingOutConn.metadata, toMetadataCloned);
+			outConns = outConns; // trigger reactivity
+			return;
+		}
+
+		/*
 		const curConnectedPeerIds = outConns.map(conn => conn.peer);
 		const idx = curConnectedPeerIds.indexOf(peerId);
 		if (idx > -1) {
 			consoley(`*** outConn ALREADY established from ${peerSelf.id} to ${peerId}`);
 			return;
 		}
+		*/
 
 		const fromMetadata = {
 			fromPeerType: isGameHost ? 'host' : 'controller',
-			fromPeerEmail: authInfo.email,
+			fromAuthInfo: JSON.parse(JSON.stringify(authInfo)),
 		};
-		const metadata = Object.assign(fromMetadata, toMetadata);
+		const metadata = Object.assign({}, fromMetadata, toMetadata);
 		const conn = peerSelf.connect(peerId, {
 			metadata,
 			//label: 'needs to be unique',
@@ -215,7 +228,12 @@
 		<ul>
 		{#each inConns as conn}
 			<li>
-				{conn.peer} ({conn.metadata.fromPeerType})
+				{conn.peer}
+				<ul>
+					<li>fromPeerType: {conn.metadata.fromPeerType}</li>
+					<li>fromAuthInfo.uid: {conn.metadata.fromAuthInfo?.uid}</li>
+
+				</ul>
 			</li>
 		{/each}
 		</ul>
@@ -228,7 +246,13 @@
 		<ul>
 		{#each outConns as conn}
 			<li>
-				{conn.peer} ({conn.metadata.toPeerType}) <button on:click={() => sendMsgByConn(conn)}>Send Message</button>
+				{conn.peer}
+				<ul>
+					<li>toPeerType: {conn.metadata.toPeerType}</li>
+					<li>toAuthInfo.uid: {conn.metadata.toAuthInfo?.uid}</li>
+
+				</ul>
+				<button on:click={() => sendMsgByConn(conn)}>Send Message</button>
 			</li>
 		{/each}
 		</ul>
