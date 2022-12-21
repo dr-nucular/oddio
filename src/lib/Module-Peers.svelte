@@ -33,6 +33,7 @@
 
 	// new
 	let pMan;
+	let qrCodeCanvas;
 	let domLogData = '';
 
 
@@ -224,6 +225,16 @@
 	////////////////////////////
 	const pmInit = async (peerType) => {
 		await pMan.init(peerType);
+		if (peerType === 'host') {
+			try {
+				const url = `${window.location.href}?gsid=abcde&hostPeerId=${pMan.peerSelf.id}`;
+				const result = await QRCode.toCanvas(qrCodeCanvas, url);
+				qrCodeCanvas.style.display = 'block';
+				//console.log(result);
+			} catch (err) {
+				console.error(err);
+			}
+		}
 	};
 	const pmConnectToHost = async () => {
 		await pMan.connectToHost();
@@ -316,8 +327,32 @@
 	<br/><hr/><br/><br/>
 
 	<button on:click={() => pmInit('host')}>PeerManager init host</button><br/>
+	<canvas bind:this={qrCodeCanvas}></canvas><br/>
 	<button on:click={() => pmInit('controller')}>PeerManager init controller</button><br/>
 	<button on:click={() => pmConnectToHost()}>PeerManager connect controller to host</button><br/>
+
+	{#if pMan?.conns?.length}
+		Peer Connections:
+		<ul>
+		{#each pMan.conns as conn}
+			<li>
+				Peer id: {conn.peerId} <button on:click={() => sendMsg(conn)}>Send Message not working yet</button>
+				<ul>
+					<li>toPeerType: {conn.metadata?.toPeerType}</li>
+					<li>toAuthInfo.uid: {conn.metadata?.toAuthInfo?.uid}</li>
+					<li>toAuthInfo.isAnonymous: {conn.metadata?.toAuthInfo?.isAnonymous}</li>
+					<li>toAuthInfo.displayName: {conn.metadata?.toAuthInfo?.displayName}</li>
+					<li>toAuthInfo.email: {conn.metadata?.toAuthInfo?.email}</li>
+					<li>lastTransmission: {conn.metadata?.lastTransmission}</li>
+				</ul>
+			</li>
+		{/each}
+		</ul>
+	{:else}
+		There are no Peer Connections.<br/><br/>
+	{/if}
+
+
 	<textarea id="domLog" bind:value={domLogData} /><br/>
 
 </div>

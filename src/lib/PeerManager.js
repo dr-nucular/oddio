@@ -174,8 +174,18 @@ class PeerManager {
 				});
 
 				this.peerSelf.on('connection', (conn) => {
-					// create conn if we dont have one already?
 					this.log(`*** peerSelf connection created by peerId ${conn.peer})`);
+
+					// throw an error if we already have this pConn
+					const dupeConn = this.conns.find(pc => pc.peerId === conn.peer);
+					if (dupeConn) {
+						this.log(`*** already have this peer connection`);
+						return;
+					}
+			
+					const peerConn = new PeerConnection(conn.peer, conn);
+					this.log(`*** new PeerConnection added: ${conn.peer})`);
+					this.conns.push(peerConn);
 				});
 
 				this.peerSelf.on('error', (err) => {
@@ -196,11 +206,18 @@ class PeerManager {
 	}
 
 	async connectToHost() {
+		const dupeConn = this.conns.find(pc => pc.peerId === hostPeerId);
+		if (dupeConn) {
+			this.log(`*** already have this peer connection`);
+			return;
+		}
+
 		this.log(`*** connectToHost attempt`);
 		const peerConn = new PeerConnection(hostPeerId);
 		await peerConn.open().then(pc => {
 			// add pc to this.conns[]
-			this.log(`*** connectToHost success.. add to manager's conns array`);
+			this.conns.push(pc);
+			this.log(`*** connectToHost success.. added to manager's conns array`);
 		}).catch(err => {
 			this.log(`*** connectToHost FAIL: ${err.message || err}`);
 		});
