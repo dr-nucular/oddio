@@ -1,8 +1,9 @@
 <script>
 	import QRCode from 'qrcode'; // https://www.npmjs.com/package/qrcode
-	import { onDestroy } from 'svelte';
+	import { onMount, onDestroy } from 'svelte';
 	import { sAuthInfo, sModules } from '../stores.js';
 	import { getUrlParams } from './utils.js';
+	import PeerManager from './PeerManager.js'; // NEW
 	let Peer;
 	if (typeof navigator !== "undefined") {
 		import("peerjs").then(imported => {
@@ -29,6 +30,12 @@
 	let inConns = [];
 
 	let peerFeedbackData = '';
+
+	// new
+	let pMan;
+	let domLogData = '';
+
+
 
 
 	// store subscriptions
@@ -91,13 +98,25 @@
 				});
 				conn.on('data', (data) => {
 					consoley(`<<< data received from ${conn.peer} (gameHost=${gameHost}): ${data}`);
+					conn.metadata.lastTransmission = Date.now();
+					inConns = inConns; // trigger reactivity
 				});
 				conn.on('error', (err) => {
 					consoley(`!!! inConn error (peer ${conn.peer}) (gameHost=${gameHost}): ${err}`);
 				});
 			});
+			peerSelf.on('close', () => {
+				consoley(`XXX peerSelf closed (gameHost=${gameHost})`);
+				peerSelf.destroy && peerSelf.destroy();
+				peerSelf = undefined;
+			});
+			peerSelf.on('disconnected', () => {
+				consoley(`??? peerSelf disconnected (gameHost=${gameHost})`);
+				peerSelf.reconnect(); // set up repeater to do this N times before destroy?
+			});
 			peerSelf.on('error', (err) => {
-				consoley(`!!! peerSelf error (gameHost=${gameHost}): ${err}`);
+				consoley(`!!! peerSelf error (gameHost=${gameHost}): ${err.type} ${err}`);
+				peerSelf.destroy && peerSelf.destroy();
 				peerSelf = undefined;
 			});
 		} else {
@@ -150,9 +169,12 @@
 			outConns = outConns; // trigger reactivity
 
 			// send hello msg
-			const openMsg = `Hi ${peerId}, this is ${peerSelf.id}`;
-			consoley(`>>> ${peerSelf.id} sending hello msg to ${peerId}: ${openMsg}`);
-			conn.send(openMsg);
+			sendMsg(conn);
+		});
+		conn.on('data', (data) => {
+			consoley(`<<< BACKWARD outConn data received by ${peerSelf.id} from ${peerId}: ${data}`);
+			conn.metadata.lastTransmission = Date.now();
+			outConns = outConns; // trigger reactivity
 		});
 		conn.on('error', (err) => {
 			consoley(`!!! outConn NOT established from ${peerSelf.id} to ${peerId}: ${err}`);
@@ -160,21 +182,26 @@
 
 	};
 
-	const sendMsg = (peerId) => {
-		// send to all if peerId is falsy
+	const sendMsg = (peerIdOrConnObj) => {
+		// send to all if peerIdOrConnObj is falsy
 		const helloMsg = `Hi from ${peerSelf.id}`;
-		outConns.forEach(conn => {
-			if (!peerId || conn.peer === peerId) {
-				consoley(`>>> sending msg to ${conn.peer}: ${helloMsg}`);
-				conn.send(helloMsg);
-			}
-		});
-	};
 
-	const sendMsgByConn = (conn) => {
-		const helloMsg = `Hi from ${peerSelf.id}`;
+		let conn;
+		if (peerIdOrConnObj) {
+			// if peerIdOrConnObj is a string (thus peerId), find outConn obj to send on,
+			// otherwise assume peerIdOrConnObj is a reference to the outConn obj itself.
+			conn = peerIdOrConnObj === 'string'
+				? outConns.find(c => c.peer === peerIdOrConnObj)
+				: peerIdOrConnObj;
+			if (!conn) {
+				consoley(`!!! sendMsg err, can't determine outConn to send on, aborting.`);
+				return;
+			}
+		}
+
 		consoley(`>>> sending msg to ${conn.peer}: ${helloMsg}`);
-		conn.send(helloMsg);
+		conn && conn.send(helloMsg);
+		return;
 	};
 
 	const generateUriForPeers = async () => {
@@ -194,8 +221,26 @@
 	};
 
 
+	////////////////////////////
+	const pmInit = async (peerType) => {
+		await pMan.init(peerType);
+	};
+	const pmConnectToHost = async () => {
+		await pMan.connectToHost();
+	};
 
 
+	onMount(() => {
+		console.log(`Peers ON MOUNT`);
+		pMan = new PeerManager({
+			logCallback: (str) => {
+				domLogData = str + `\n` + domLogData;
+			},
+			connsUpdatedCallback: (conns) => {
+				console.log(`connsUpdatedCallback TODO`);
+			},
+		});
+	});
 	onDestroy(() => {
 		unsubAuthInfo();
 		unsubModules();
@@ -228,11 +273,14 @@
 		<ul>
 		{#each inConns as conn}
 			<li>
-				{conn.peer}
+				Peer id: {conn.peer} <button on:click={() => sendMsg(conn)}>Send Message</button>
 				<ul>
 					<li>fromPeerType: {conn.metadata.fromPeerType}</li>
 					<li>fromAuthInfo.uid: {conn.metadata.fromAuthInfo?.uid}</li>
-
+					<li>fromAuthInfo.isAnonymous: {conn.metadata.fromAuthInfo?.isAnonymous}</li>
+					<li>fromAuthInfo.displayName: {conn.metadata.fromAuthInfo?.displayName}</li>
+					<li>fromAuthInfo.email: {conn.metadata.fromAuthInfo?.email}</li>
+					<li>lastTransmission: {conn.metadata.lastTransmission}</li>
 				</ul>
 			</li>
 		{/each}
@@ -246,13 +294,15 @@
 		<ul>
 		{#each outConns as conn}
 			<li>
-				{conn.peer}
+				Peer id: {conn.peer} <button on:click={() => sendMsg(conn)}>Send Message</button>
 				<ul>
 					<li>toPeerType: {conn.metadata.toPeerType}</li>
 					<li>toAuthInfo.uid: {conn.metadata.toAuthInfo?.uid}</li>
-
+					<li>toAuthInfo.isAnonymous: {conn.metadata.toAuthInfo?.isAnonymous}</li>
+					<li>toAuthInfo.displayName: {conn.metadata.toAuthInfo?.displayName}</li>
+					<li>toAuthInfo.email: {conn.metadata.toAuthInfo?.email}</li>
+					<li>lastTransmission: {conn.metadata.lastTransmission}</li>
 				</ul>
-				<button on:click={() => sendMsgByConn(conn)}>Send Message</button>
 			</li>
 		{/each}
 		</ul>
@@ -262,6 +312,14 @@
 
 	<button on:click={() => sendMsg()}>Send Message to all outConns</button><br/>
 	<textarea id="peerFeedback" bind:value={peerFeedbackData} /><br/>
+
+	<br/><hr/><br/><br/>
+
+	<button on:click={() => pmInit('host')}>PeerManager init host</button><br/>
+	<button on:click={() => pmInit('controller')}>PeerManager init controller</button><br/>
+	<button on:click={() => pmConnectToHost()}>PeerManager connect controller to host</button><br/>
+	<textarea id="domLog" bind:value={domLogData} /><br/>
+
 </div>
 
 
