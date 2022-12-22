@@ -223,9 +223,22 @@
 
 
 	////////////////////////////
-	const pmInit = async (peerType) => {
-		await pMan.init(peerType);
-		if (peerType === 'host') {
+	const pmInit = async (myType) => {
+		pMan.config({
+			myType,
+			myUserId: authInfo.uid,
+			myName: authInfo.displayName,
+			sessionOwner: myType === 'host', // will come from db eventually
+			logCallback: (str) => {
+				domLogData = str + `\n` + domLogData;
+			},
+			connsUpdatedCallback: (conns) => {
+				console.log(`connsUpdatedCallback TODO`);
+			},
+		});
+		await pMan.init(myType);
+		if (pMan.sessionOwner) {
+			// show QRCode for others to link to
 			try {
 				const url = `${window.location.href}?gsid=abcde&hostPeerId=${pMan.peerSelf.id}`;
 				const result = await QRCode.toCanvas(qrCodeCanvas, url);
@@ -237,20 +250,13 @@
 		}
 	};
 	const pmConnectToHost = async () => {
-		await pMan.connectToHost();
+		await pMan.initiateDataConnection(hostPeerId);
 	};
 
 
 	onMount(() => {
 		console.log(`Peers ON MOUNT`);
-		pMan = new PeerManager({
-			logCallback: (str) => {
-				domLogData = str + `\n` + domLogData;
-			},
-			connsUpdatedCallback: (conns) => {
-				console.log(`connsUpdatedCallback TODO`);
-			},
-		});
+		pMan = new PeerManager();
 	});
 	onDestroy(() => {
 		unsubAuthInfo();
@@ -326,9 +332,24 @@
 
 	<br/><hr/><br/><br/>
 
-	<button on:click={() => pmInit('host')}>PeerManager init host</button><br/>
+	PeerManager: <button on:click={() => pmInit('host')}>Init as Host</button>
+		or <button on:click={() => pmInit('controller')}>Init as Controller</button><br/>
 	<canvas bind:this={qrCodeCanvas}></canvas><br/>
-	<button on:click={() => pmInit('controller')}>PeerManager init controller</button><br/>
+	
+	{#if pMan?.peerSelf}
+		Your Peer info:
+		<ul>
+			<li>peerSelf.id: {pMan.peerSelf.id}</li>
+			<li>myType: {pMan.myType}</li>
+			<li>myUserId: {pMan.myUserId}</li>
+			<li>myName: {pMan.myName}</li>
+			<li>myDeviceId: {pMan.myDeviceId}</li>
+			<li>sessionOwner: {pMan.sessionOwner}</li>
+		</ul>
+	{:else}
+		Peer info has not yet been initialized.<br/><br/>
+	{/if}
+
 	<button on:click={() => pmConnectToHost()}>PeerManager connect controller to host</button><br/>
 
 	{#if pMan?.conns?.length}
@@ -336,14 +357,20 @@
 		<ul>
 		{#each pMan.conns as conn}
 			<li>
-				Peer id: {conn.peerId} <button on:click={() => sendMsg(conn)}>Send Message not working yet</button>
+				Peer id: {conn.peerId} <button on:click={() => sendMsg(conn.conn)}>Send Message</button>
 				<ul>
-					<li>toPeerType: {conn.metadata?.toPeerType}</li>
-					<li>toAuthInfo.uid: {conn.metadata?.toAuthInfo?.uid}</li>
-					<li>toAuthInfo.isAnonymous: {conn.metadata?.toAuthInfo?.isAnonymous}</li>
-					<li>toAuthInfo.displayName: {conn.metadata?.toAuthInfo?.displayName}</li>
-					<li>toAuthInfo.email: {conn.metadata?.toAuthInfo?.email}</li>
-					<li>lastTransmission: {conn.metadata?.lastTransmission}</li>
+					<li>peerType: {conn.peerType}</li>
+					<li>peerUserId: {conn.peerUserId}</li>
+					<li>peerName: {conn.peerName}</li>
+					<li>peerDeviceId: {conn.peerDeviceId}</li>
+					<li>peerIsSessionOwner: {conn.peerIsSessionOwner}</li>
+
+					<li>createdOn: {conn.createdOn}</li>
+					<li>updatedOn: {conn.updatedOn}</li>
+					<li>numMsgsIn: {conn.numMsgsIn}</li>
+					<li>numMsgsOut: {conn.numMsgsOut}</li>
+					<li>lastMsgIn: {conn.lastMsgIn}</li>
+					<li>lastMsgOut: {conn.lastMsgOut}</li>
 				</ul>
 			</li>
 		{/each}
