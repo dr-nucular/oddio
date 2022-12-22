@@ -1,6 +1,43 @@
 BEAT BATTLE dev plan
 --------------------
 
+-------------
+12.20.2022
+
+different roles in solving a music puzzle
+- piece fetcher: grabs a piece and places it on a catapult
+- piece flinger: aims catapult and launches piece to other side of board to be caught by the...
+- piece catcher: catches the piece, orients (spins/flips) it properly, hands it to the...
+- piece placer: who carries the piece to the right spot and drops it
+- various disruptors
+
+gotta jump over the play-stripe that passes left to right
+
+when you get a whole row or column, you rewind to prior phrase or something?   buys you more time
+
+whta if it was like a real puzzle look
+what if it was a puzle _video_
+
+what about connect4 style play
+
+make sure we can have 1, 2, 3, 4 player modes.. even more would rule
+- 1-player
+    - 
+- 2-player
+
+- 3-player
+
+- 4-player
+    - this could be 2 vs 2 or 4 coop
+
+game can start with entire empty grid (hard) or perhaps start with a row filled out
+
+
+
+
+-------------
+12.12.2022
+
 with current svelte project, extend peers section:
 - computer creates/resumes a game session, joins as peer 1
     - add this to db
