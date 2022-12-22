@@ -22,7 +22,6 @@ class PeerManager {
 		if (PeerManager.instance) return PeerManager.instance;
 		PeerManager.instance = this;
 
-		console.log(`PeerManager.constructor()`);
 		this.peerSelf = undefined; // Peer instance
 		this.conns = []; // array of PeerConnections
 
@@ -31,6 +30,7 @@ class PeerManager {
 		this.myName = undefined;
 		this.myDeviceId = undefined;
 		this.sessionOwner = false;
+
 		this.logCallback = undefined;
 		this.connsUpdatedCallback = undefined;
 
@@ -84,30 +84,11 @@ class PeerManager {
 				this.peerSelf.on('open', (id) => {
 					this.log(`*** peerSelf created (type=${peerSelfType}): ${id}`);
 					if (peerSelfType === 'host') {
-						//priPeerButton.innerText = `${id}`;
-						//isGameHost = true;
 						// if gameHost, display QRCode
 						//generateUriForPeers();
-					} else {
-						//secPeerButton.innerText = `${id}`;
-						// if controller, connect to gameHost and send a hello msg
-						/*
-						createOutConn(hostPeerId, {
-							toPeerType: undefined,
-							toAuthInfo: undefined,
-						});
-						createFullConn(hostPeerId);
-						*/
-						//const conn = new PeerConnection({ peerId: hostPeerId });
-						//conn.init();
 					}
 					this.peerSelfType = peerSelfType;
 					resolve(this);
-				});
-
-				this.peerSelf.on('connection', async (conn) => {
-					const peerConn = await this.receiveDataConnection(conn);
-					peerConn.updatePeer();
 				});
 
 				this.peerSelf.on('error', (err) => {
@@ -117,57 +98,54 @@ class PeerManager {
 					reject(err);
 				});
 	
-
-
 			} catch (err) {
 				this.log(`*** peerSelf FAILED to be created (type=${this.peerSelfType}): ${err}`);
 				reject(err);
 			}
 		});
-		return openPromise;
+
+		return openPromise.then(() => {
+			// now add other callbacks
+			// TODO move to own method attachPeerListeners() or something
+			this.peerSelf.on('connection', async (conn) => {
+				const peerConn = await this.receiveDataConnection(conn);
+				peerConn.updatePeer();
+			});
+
+			//this.onUpdate();
+			return this;
+		}).catch(err => {
+			this.log(`ERROR: ${err}`);
+			//this.onUpdate();
+			return this;
+		});
 	}
 
 	async initiateDataConnection(peerId) {
-		this.log(`*** outgoing conn attempt to peerId ${peerId})`);
-
 		// throw an error if we already have this pConn
 		const dupeConn = this.conns.find(pc => pc.peerId === peerId);
 		if (dupeConn) {
-			this.log(`*** outgoing conn FAIL: already have this peer connection`);
+			this.log(`*** outgoing conn: already have this peer connection`);
 			return;
 		}
 
 		// create PeerConnection from peerId
 		const peerConn = new PeerConnection({ peerId });
-		await peerConn.open().then(pc => {
-			// add pc to this.conns[]
-			this.conns.push(pc);
-			this.log(`*** outgoing conn open success: ${pc.peerId}`);
-		}).catch(err => {
-			this.log(`*** outgoing conn open FAIL: ${err.message || err}`);
-		});
+		await peerConn.open();
 		return peerConn;
 	}
 
 	async receiveDataConnection(conn) {
-		this.log(`*** incoming conn attempt from peerId ${conn.peer})`);
-
 		// throw an error if we already have this pConn
 		const dupeConn = this.conns.find(pc => pc.peerId === conn.peer);
 		if (dupeConn) {
-			this.log(`*** incoming conn FAIL: already have this peer connection`);
+			this.log(`*** incoming conn: already have this peer connection`);
 			return;
 		}
 
 		// create PeerConnection from conn
 		const peerConn = new PeerConnection({ conn });
-		await peerConn.open().then(pc => {
-			// add pc to this.conns[]
-			this.conns.push(pc);
-			this.log(`*** incoming conn open success: ${pc.peerId}`);
-		}).catch(err => {
-			this.log(`*** incoming conn open FAIL: ${err.message || err}`);
-		});
+		await peerConn.open();
 		return peerConn;
 	}
 
@@ -176,7 +154,23 @@ class PeerManager {
 		this.logCallback && this.logCallback(`PeerManager: ${data}`);
 	}
 
-	connsUpdated() {
+	updateConns(peerConn) {
+		// if peerConn.conn is open, then ensure it's part of this.conns.
+		// if peerConn.conn is not open, then remove it from this.conns
+		if (peerConn?.conn) {
+			const idx = this.conns.indexOf(peerConn);
+			if (peerConn.conn.open) {
+				if (idx === -1) {
+					this.conns.push(peerConn);
+				}
+			} else {
+				if (idx !== -1) {
+					this.conns.splice(idx, 1);
+				}
+			}
+		}
+
+		// finally trigger the provided callback, if defined
 		this.connsUpdatedCallback && this.connsUpdatedCallback(this.conns);
 	}
 
@@ -233,6 +227,7 @@ class PeerConnection {
 			try {
 				this.createdOn = Date.now();
 				if (!this.conn) {
+					// we are initiating the connection with metadata about self
 					this.conn = this.peerSelf.connect(this.peerId, {
 						metadata: {
 							peerType: this.peerManager.myType,
@@ -246,83 +241,103 @@ class PeerConnection {
 						//reliable: false,
 					});
 				} else {
-					// TODO: protect this from getting overwritten in case multiple .open() calls occur?
+					// we are receiving an already made connection -- save any provided metadata about peer
 					const metadata = this.conn.metadata;
-					this.peerType = metadata.peerType;
-					this.peerUserId = metadata.peerUserId;
-					this.peerName = metadata.peerName;
-					this.peerDeviceId = metadata.peerDeviceId;
-					this.peerIsSessionOwner = metadata.peerIsSessionOwner;
+					if (metadata?.peerType !== undefined) this.peerType = metadata.peerType;
+					if (metadata?.peerUserId !== undefined) this.peerUserId = metadata.peerUserId;
+					if (metadata?.peerName !== undefined) this.peerName = metadata.peerName;
+					if (metadata?.peerDeviceId !== undefined) this.peerDeviceId = metadata.peerDeviceId;
+					if (metadata?.peerIsSessionOwner !== undefined) this.peerIsSessionOwner = metadata.peerIsSessionOwner;
 				}
 
 				this.conn.on('open', () => {
 					this.log(`*** conn established between ${this.peerSelf.id} and ${this.peerId}`);
-					//outConns.push(conn);
-					//outConns = outConns; // trigger reactivity
-		
-					// send hello msg
-					//sendMsg(conn);
-					resolve(this);
-				});
-
-				this.conn.on('data', (data) => {
-					this.log(`<<< conn data received by ${this.peerSelf.id} from ${this.peerId}: ${data}`);
-					//conn.metadata.lastTransmission = Date.now();
-					//outConns = outConns; // trigger reactivity
-					if (data.type === 'peerUpdate') {
-						this.log(`*** peerUpdate data received from ${this.peerId}`);
-						const now = Date.now();
-						this.peerType = data.peerType;
-						this.peerUserId = data.peerUserId;
-						this.peerName = data.peerName;
-						this.peerDeviceId = data.peerDeviceId;
-						this.peerIsSessionOwner = data.peerIsSessionOwner;
-						this.updatedOn = now;
-						this.lastMsgIn = now;
-						this.numMsgsIn += 1;
-					}
+					resolve();
 				});
 
 				this.conn.on('error', (err) => {
-					this.log(`!!! conn NOT established between ${this.peerSelf.id} and ${this.peerId}: ${err}`);
 					reject(err);
 				});
 		
-				// already open?  resolve now
-				this.conn.open && resolve(this);
-			
+				// already open?
+				if (this.conn.open) {
+					resolve();
+				}
 			} catch (err) {
-				this.log(`*** conn FAILED to be opened, err: ${err}`);
 				reject(err);
 			}
 
 		});
-		return openPromise;
+
+		return openPromise.then(() => {
+			// now add other callbacks
+			// TODO move to own method attachConnectionListeners() or something
+			this.conn.on('data', (data) => {
+				this.log(`receiveData() type=${data?.type} from ${this.peerId}`);
+				const now = Date.now();
+				if (data.type === 'peerUpdate') {
+					this.peerType = data.peerType;
+					this.peerUserId = data.peerUserId;
+					this.peerName = data.peerName;
+					this.peerDeviceId = data.peerDeviceId;
+					this.peerIsSessionOwner = data.peerIsSessionOwner;
+					this.updatedOn = now;
+				}
+				this.lastMsgIn = now;
+				this.numMsgsIn += 1;
+				this.onUpdate();
+			});
+
+			this.onUpdate();
+			return this;
+		}).catch(err => {
+			this.log(`ERROR: ${err}`);
+			this.onUpdate();
+			return this;
+		});
 	}
 
 	updatePeer() {
+		this.log(`updatePeer()`);
+		
 		// send updated information about self to peer so they can update their PeerConnection metadata
-		this.log(`*** updatePeer()`);
-		const now = Date.now();
-		this.conn.send({
+		const msg = {
 			type: 'peerUpdate',
 			peerType: this.peerManager.myType,
 			peerUserId: this.peerManager.myUserId,
 			peerName: this.peerManager.myName,
 			peerDeviceId: this.peerManager.myDeviceId,
 			peerIsSessionOwner: this.peerManager.sessionOwner,
-		});
-		this.updatedOn = now;
+		};
+		this.sendData(msg, true);
+		this.updatedOn = this.lastMsgOut;
+		this.onUpdate();
+	}
+
+	sendData(msgObj, skipUpdate = false) {
+		this.log(`sendData() type=${msgObj?.type} to ${this.peerId}`);
+		
+		this.conn.send(msgObj);
+
+		const now = Date.now();
 		this.lastMsgOut = now;
 		this.numMsgsOut += 1;
+		!skipUpdate && this.onUpdate();
 	}
 
 	ping() {
-		// send data about self
+		// send simple ping, expect onPong back within some time
 	}
 
 	onPong() {
-		// received data about peer
+		// received pong
+	}
+
+	onUpdate() {
+		this.log(`onUpdate()`);
+		// let peerManager know that this conn has some updated info.
+		// call this after creation/destruction, or metadata update.
+		this.peerManager.updateConns(this);
 	}
 
 	log(data) {
