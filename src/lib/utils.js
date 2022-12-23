@@ -58,3 +58,19 @@ export const getUrlParams = () => {
 	}
 	return urlParams;
 };
+
+export const mean = (values) => {
+    const sum = values.reduce((previous, current) => current += previous);
+    return sum / values.length;
+};
+
+export const median = (arr) => {
+    const mid = Math.floor(arr.length * 0.5);
+    const sorted = [...arr].sort((a, b) => a - b);
+    return arr.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) * 0.5 : sorted[mid];
+};
+
+export const trimmedMean = (values, trimPerc) => {
+    const trimCount = Math.floor(trimPerc * values.length);
+    return mean(values.sort((a, b) => a - b).slice(trimCount, values.length - trimCount));
+};

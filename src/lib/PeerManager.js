@@ -1,3 +1,4 @@
+import { trimmedMean } from './utils.js';
 let Peer;
 if (typeof navigator !== "undefined") {
 	import("peerjs").then(imported => {
@@ -108,7 +109,7 @@ class PeerManager {
 			// now add other callbacks
 			// TODO move to own method attachPeerListeners() or something
 			this.peerSelf.on('connection', async (conn) => {
-				const peerConn = await this.receiveDataConnection(conn);
+				const peerConn = await this.onDataConnection(conn);
 				peerConn.updatePeer();
 			});
 
@@ -135,7 +136,7 @@ class PeerManager {
 		return peerConn;
 	}
 
-	async receiveDataConnection(conn) {
+	async onDataConnection(conn) {
 		// throw an error if we already have this pConn
 		const dupeConn = this.conns.find(pc => pc.peerId === conn.peer);
 		if (dupeConn) {
@@ -215,6 +216,11 @@ class PeerConnection {
 		this.numMsgsOut = 0;
 		this.lastMsgIn = undefined;
 		this.lastMsgOut = undefined;
+
+		this.pastPingPongData = [];
+		this.roundTripAvg = undefined;
+		this.latencyAvg = undefined;
+		this.peerClockOffsetAvg = undefined;
 	}
 
 	open() {
@@ -273,19 +279,7 @@ class PeerConnection {
 			// now add other callbacks
 			// TODO move to own method attachConnectionListeners() or something
 			this.conn.on('data', (data) => {
-				this.log(`receiveData() type=${data?.type} from ${this.peerId}`);
-				const now = Date.now();
-				if (data.type === 'peerUpdate') {
-					this.peerType = data.peerType;
-					this.peerUserId = data.peerUserId;
-					this.peerName = data.peerName;
-					this.peerDeviceId = data.peerDeviceId;
-					this.peerIsSessionOwner = data.peerIsSessionOwner;
-					this.updatedOn = now;
-				}
-				this.lastMsgIn = now;
-				this.numMsgsIn += 1;
-				this.onUpdate();
+				this.onData(data);
 			});
 
 			this.onUpdate();
@@ -297,9 +291,19 @@ class PeerConnection {
 		});
 	}
 
+	//////////////////// send
+	sendData(data, skipUpdate = false) {
+		this.log(`sendData() type=${data?.type} to ${this.peerId}`);
+		this.conn.send(data);
+
+		const now = Date.now();
+		this.lastMsgOut = now;
+		this.numMsgsOut += 1;
+		!skipUpdate && this.onUpdate();
+	}
+
 	updatePeer() {
-		this.log(`updatePeer()`);
-		
+		//this.log(`updatePeer()`);
 		// send updated information about self to peer so they can update their PeerConnection metadata
 		const msg = {
 			type: 'peerUpdate',
@@ -314,23 +318,69 @@ class PeerConnection {
 		this.onUpdate();
 	}
 
-	sendData(msgObj, skipUpdate = false) {
-		this.log(`sendData() type=${msgObj?.type} to ${this.peerId}`);
-		
-		this.conn.send(msgObj);
-
-		const now = Date.now();
-		this.lastMsgOut = now;
-		this.numMsgsOut += 1;
-		!skipUpdate && this.onUpdate();
-	}
-
 	ping() {
-		// send simple ping, expect onPong back within some time
+		// send simple ping, expect onPong back very soon
+		const data = {
+			type: 'ping',
+			pingClock: Date.now(),
+		};
+		this.sendData(data);
 	}
 
-	onPong() {
+	/////////////////////////////// receive
+	onData(data) {
+		this.log(`onData() type=${data?.type} from ${this.peerId}`);
+		const now = Date.now();
+		if (data.type === 'peerUpdate') {
+			// save data to this PeerConnection
+			this.peerType = data.peerType;
+			this.peerUserId = data.peerUserId;
+			this.peerName = data.peerName;
+			this.peerDeviceId = data.peerDeviceId;
+			this.peerIsSessionOwner = data.peerIsSessionOwner;
+			this.updatedOn = now;
+		} else if (data.type === 'ping') {
+			// just return a pong msg
+			const pongData = {
+				type: 'pong',
+				peerClock: now,
+				pingClock: data.pingClock,
+			};
+			this.sendData(pongData);
+		} else if (data.type === 'pong') {
+			const ppData = {
+				pingClock: data.pingClock,
+				peerClock: data.peerClock,
+				pongClock: now,
+			};
+			this.onPong(ppData);	
+		}
+		this.lastMsgIn = now;
+		this.numMsgsIn += 1;
+		this.onUpdate();
+	}
+	
+	onPong(ppData) {
 		// received pong
+		// compute some ping latencies and clock offsets
+		const roundTrip = ppData.pongClock - ppData.pingClock;
+		const latency = roundTrip * 0.5;
+		const peerClockOffset = (ppData.peerClock - latency) - ppData.pingClock;
+		this.log(`onPong() roundTrip=${roundTrip}ms, latency=${latency}ms, peerClockOffset=${peerClockOffset}ms`);
+
+		this.pastPingPongData.unshift({ roundTrip, latency, peerClockOffset });
+		if (this.pastPingPongData.length > 10) {
+			this.pastPingPongData.pop();
+		}
+
+		const roundTrips = this.pastPingPongData.map(v => v.roundTrip);
+		this.roundTripAvg = trimmedMean(roundTrips, 0.4);
+		const latencies = this.pastPingPongData.map(v => v.latency);
+		this.latencyAvg = trimmedMean(latencies, 0.4);
+		const peerClockOffsets = this.pastPingPongData.map(v => v.peerClockOffset);
+		this.peerClockOffsetAvg = trimmedMean(peerClockOffsets, 0.4);
+
+		this.onUpdate();
 	}
 
 	onUpdate() {

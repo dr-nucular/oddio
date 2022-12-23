@@ -3,7 +3,7 @@
 	import { onMount, onDestroy } from 'svelte';
 	import { sAuthInfo, sModules } from '../stores.js';
 	import { getUrlParams } from './utils.js';
-	import PeerManager from './PeerManager.js'; // NEW
+	import PeerManager from './PeerManager.js';
 	let Peer;
 	if (typeof navigator !== "undefined") {
 		import("peerjs").then(imported => {
@@ -103,11 +103,11 @@
 				<ul>
 					<li>
 						<button on:click={() => conn.sendData({ type: 'hello' })}>Send Hello</button>
-						<button on:click={() => conn.sendData({ type: 'ping' })}>Send 1 Ping</button>
+						<button on:click={() => conn.ping()}>Send 1 Ping</button>
 					</li>
 					<li>
-						<button on:click={() => conn.sendData({ type: 'ping' })}>Start Repeated Pings</button>
-						<button on:click={() => conn.sendData({ type: 'ping' })}>Stop Repeated Pings</button>
+						<button on:click={() => conn.ping()}>Start Repeated Pings</button>
+						<button on:click={() => conn.ping()}>Stop Repeated Pings</button>
 					</li>
 					
 					<li>peerType: {conn.peerType}</li>
@@ -122,6 +122,10 @@
 					<li>numMsgsOut: {conn.numMsgsOut}</li>
 					<li>lastMsgIn: {conn.lastMsgIn}</li>
 					<li>lastMsgOut: {conn.lastMsgOut}</li>
+
+					<li>roundTripAvg: {conn.roundTripAvg}ms</li>
+					<li>latencyAvg: {conn.latencyAvg}ms</li>
+					<li>peerClockOffsetAvg: {conn.peerClockOffsetAvg}ms</li>
 				</ul>
 			</li>
 		{/each}
