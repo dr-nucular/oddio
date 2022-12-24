@@ -18,6 +18,7 @@
 	// other states
 	const hostPeerId = 'yay';
 	let pMan;
+	//let myPeerInfo;
 	let conns = []; // array of PeerConnections
 	let qrCodeCanvas;
 	let domLogData = '';
@@ -47,8 +48,11 @@
 			logCallback: (str) => {
 				domLogData = str + `\n` + domLogData;
 			},
-			connsUpdatedCallback: (peerConns) => {
-				conns = peerConns; // triggers reactivity
+			peerManagerUpdatedCallback: (pm) => {
+				pMan = pm; // triggers reactivity
+			},
+			connsUpdatedCallback: (pc) => {
+				conns = pc; // triggers reactivity
 			},
 		});
 		await pMan.init(myType);
@@ -99,33 +103,40 @@
 		<ul>
 		{#each conns as conn}
 			<li>
-				Peer id: {conn.peerId}
-				<ul>
-					<li>
-						<button on:click={() => conn.sendData({ type: 'hello' })}>Send Hello</button>
-						<button on:click={() => conn.ping()}>Send 1 Ping</button>
-					</li>
-					<li>
-						<button on:click={() => conn.ping()}>Start Repeated Pings</button>
-						<button on:click={() => conn.ping()}>Stop Repeated Pings</button>
-					</li>
+				Peer [{conn.conn.open ? 'open' : 'closed'}]: {conn.peerId}
+				<ul>					
+					<li>createdOn: {conn.createdOn}</li>
 					
 					<li>peerType: {conn.peerType}</li>
 					<li>peerUserId: {conn.peerUserId}</li>
 					<li>peerName: {conn.peerName}</li>
 					<li>peerDeviceId: {conn.peerDeviceId}</li>
 					<li>peerIsSessionOwner: {conn.peerIsSessionOwner}</li>
+					<li>lastPeerUpdateIn: {conn.lastPeerUpdateIn}</li>
+					<li>lastPeerUpdateOut: {conn.lastPeerUpdateOut}</li>
 
-					<li>createdOn: {conn.createdOn}</li>
-					<li>updatedOn: {conn.updatedOn}</li>
+					<li>
+						<button on:click={() => conn.sendData({ type: 'hello' })}>Send Hello Msg</button>
+					</li>
+					
 					<li>numMsgsIn: {conn.numMsgsIn}</li>
 					<li>numMsgsOut: {conn.numMsgsOut}</li>
 					<li>lastMsgIn: {conn.lastMsgIn}</li>
 					<li>lastMsgOut: {conn.lastMsgOut}</li>
 
-					<li>roundTripAvg: {conn.roundTripAvg}ms</li>
-					<li>latencyAvg: {conn.latencyAvg}ms</li>
-					<li>peerClockOffsetAvg: {conn.peerClockOffsetAvg}ms</li>
+					<li>
+						<button on:click={() => conn.ping()}>Send 1 Ping</button>
+					</li>
+
+					<li>roundTripAvg: {conn.roundTripAvg} ms</li>
+					<li>latencyAvg: {conn.latencyAvg} ms</li>
+					<li>peerClockOffsetAvg: {conn.peerClockOffsetAvg} ms</li>
+					<li>numPingsSinceLastPong: {conn.numPingsSinceLastPong}</li>
+
+					<li>
+						<button on:click={() => conn.startPings()}>Start Repeated Pings</button>
+						<button on:click={() => conn.stopPings()}>Stop Repeated Pings</button>
+					</li>
 				</ul>
 			</li>
 		{/each}
