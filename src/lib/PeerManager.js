@@ -31,7 +31,7 @@ class PeerManager {
 		PeerManager.instance = this;
 
 		this.peerSelf = undefined; // Peer instance
-		this.conns = []; // array of PeerConnections
+		this.peerConns = []; // array of PeerConnections
 
 		this.myType = undefined;
 		this.myUserId = undefined;
@@ -40,8 +40,8 @@ class PeerManager {
 		this.sessionOwner = false;
 
 		this.logCallback = undefined;
-		this.peerManagerUpdatedCallback = undefined; // triggered only from peer.open callback right now
-		this.connsUpdatedCallback = undefined; // triggered any time there's a change to PeerConnection info
+		this.peerMgrUpdatedCB = undefined; // triggered only from peer.open callback right now
+		this.peerConnsUpdatedCB = undefined; // triggered any time there's a change to PeerConnection info
 
 		this.config(opts);
 	}
@@ -54,7 +54,7 @@ class PeerManager {
 			this.myDeviceId = undefined;
 			this.sessionOwner = false;
 			this.logCallback = undefined;
-			this.connsUpdatedCallback = undefined;
+			this.peerConnsUpdatedCB = undefined;
 		}
 		if (opts.myType) this.myType = opts.myType;
 		if (opts.myUserId) this.myUserId = opts.myUserId;
@@ -62,8 +62,8 @@ class PeerManager {
 		if (opts.myDeviceId) this.myDeviceId = opts.myDeviceId;
 		if (opts.sessionOwner) this.sessionOwner = opts.sessionOwner;
 		if (opts.logCallback) this.logCallback = opts.logCallback;
-		if (opts.peerManagerUpdatedCallback) this.peerManagerUpdatedCallback = opts.peerManagerUpdatedCallback;
-		if (opts.connsUpdatedCallback) this.connsUpdatedCallback = opts.connsUpdatedCallback;
+		if (opts.peerMgrUpdatedCB) this.peerMgrUpdatedCB = opts.peerMgrUpdatedCB;
+		if (opts.peerConnsUpdatedCB) this.peerConnsUpdatedCB = opts.peerConnsUpdatedCB;
 	}
 
 	init(peerSelfType) {
@@ -121,18 +121,18 @@ class PeerManager {
 				const peerConn = await this.onDataConnection(conn);
 				peerConn.updatePeer();
 			});
-			this.peerManagerUpdatedCallback && this.peerManagerUpdatedCallback(this);
+			this.peerMgrUpdatedCB && this.peerMgrUpdatedCB(this);
 			return this;
 		}).catch(err => {
 			this.log(LOG_LEVEL.error, `ERROR: ${err}`);
-			this.peerManagerUpdatedCallback && this.peerManagerUpdatedCallback(this);
+			this.peerMgrUpdatedCB && this.peerMgrUpdatedCB(this);
 			return this;
 		});
 	}
 
 	async initiateDataConnection(peerId) {
 		// throw an error if we already have this pConn
-		const dupeConn = this.conns.find(pc => pc.peerId === peerId);
+		const dupeConn = this.peerConns.find(pc => pc.peerId === peerId);
 		if (dupeConn) {
 			this.log(LOG_LEVEL.warn, `*** outgoing conn: already have this peer connection`);
 			return;
@@ -146,7 +146,7 @@ class PeerManager {
 
 	async onDataConnection(conn) {
 		// throw an error if we already have this pConn
-		const dupeConn = this.conns.find(pc => pc.peerId === conn.peer);
+		const dupeConn = this.peerConns.find(pc => pc.peerId === conn.peer);
 		if (dupeConn) {
 			this.log(LOG_LEVEL.warn, `*** incoming conn: already have this peer connection`);
 			return;
@@ -159,32 +159,32 @@ class PeerManager {
 	}
 
 	updateConns(peerConn) {
-		// if peerConn.conn is open, then ensure it's part of this.conns.
-		// if peerConn.conn is not open, then remove it from this.conns
-		const idx = this.conns.indexOf(peerConn);
+		// if peerConn.conn is open, then ensure it's part of this.peerConns.
+		// if peerConn.conn is not open, then remove it from this.peerConns
+		const idx = this.peerConns.indexOf(peerConn);
 		if (peerConn?.conn) {
 			if (idx === -1) {
-				this.conns.push(peerConn);
+				this.peerConns.push(peerConn);
 			}
 			/*
 			if (peerConn.conn.open) {
 				if (idx === -1) {
-					this.conns.push(peerConn);
+					this.peerConns.push(peerConn);
 				}
 			} else {
 				if (idx !== -1) {
-					this.conns.splice(idx, 1);
+					this.peerConns.splice(idx, 1);
 				}
 			}
 			*/
 		} else {
 			if (idx !== -1) {
-				this.conns.splice(idx, 1);
+				this.peerConns.splice(idx, 1);
 			}
 		}
 
 		// finally trigger the provided callback, if defined
-		this.connsUpdatedCallback && this.connsUpdatedCallback(this.conns);
+		this.peerConnsUpdatedCB && this.peerConnsUpdatedCB(this.peerConns);
 	}
 
 	log(logLevel, data) {
@@ -247,7 +247,7 @@ class PeerConnection {
 		this.latencyAvg = undefined;
 		this.peerClockOffsetAvg = undefined;
 		this.numPingsSinceLastPong = 0;
-		this.pingTimeout = undefined;
+		this.pingTimeoutId = undefined;
 	}
 
 	open() {
@@ -446,9 +446,9 @@ class PeerConnection {
 	//////////////////////// utility methods
 	startPings() {
 		this.log(LOG_LEVEL.log, `startPings()`);
-		if (!this.pingTimeout) {
+		if (!this.pingTimeoutId) {
 			const pingTimeoutCallback = () => {
-				this.pingTimeout = setTimeout(pingTimeoutCallback, 3000);
+				this.pingTimeoutId = setTimeout(pingTimeoutCallback, 3000);
 				this.ping();
 			};
 			pingTimeoutCallback();
@@ -457,9 +457,9 @@ class PeerConnection {
 
 	stopPings() {
 		this.log(LOG_LEVEL.log, `stopPings()`);
-		if (this.pingTimeout) {
-			clearTimeout(this.pingTimeout);
-			this.pingTimeout = undefined;
+		if (this.pingTimeoutId) {
+			clearTimeout(this.pingTimeoutId);
+			this.pingTimeoutId = undefined;
 		}
 	}
 

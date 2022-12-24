@@ -19,8 +19,10 @@
 	const hostPeerId = 'yay';
 	let pMan;
 	//let myPeerInfo;
-	let conns = []; // array of PeerConnections
+	let peerConns = []; // array of PeerConnections
 	let qrCodeCanvas;
+
+	let domLogs = [];
 	let domLogData = '';
 
 	// store subscriptions
@@ -46,13 +48,17 @@
 			myName: authInfo.displayName,
 			sessionOwner: myType === 'host', // will come from db eventually
 			logCallback: (str) => {
-				domLogData = str + `\n` + domLogData;
+				domLogs.unshift(str);
+				if (domLogs.length > 10) {
+					domLogs.pop();
+				}
+				domLogData = domLogs.join(`\n`);
 			},
-			peerManagerUpdatedCallback: (pm) => {
+			peerMgrUpdatedCB: (pm) => {
 				pMan = pm; // triggers reactivity
 			},
-			connsUpdatedCallback: (pc) => {
-				conns = pc; // triggers reactivity
+			peerConnsUpdatedCB: (pc) => {
+				peerConns = pc; // triggers reactivity
 			},
 		});
 		await pMan.init(myType);
@@ -98,44 +104,44 @@
 
 	<button on:click={() => pMan.initiateDataConnection(hostPeerId)}>PeerManager connect controller to host</button><br/>
 
-	{#if conns.length}
+	{#if peerConns.length}
 		Peer Connections:
 		<ul>
-		{#each conns as conn}
+		{#each peerConns as peerConn}
 			<li>
-				Peer [{conn.conn.open ? 'open' : 'closed'}]: {conn.peerId}
+				Peer [{peerConn.conn.open ? 'open' : 'closed'}]: {peerConn.peerId}
 				<ul>					
-					<li>createdOn: {conn.createdOn}</li>
+					<li>createdOn: {peerConn.createdOn}</li>
 					
-					<li>peerType: {conn.peerType}</li>
-					<li>peerUserId: {conn.peerUserId}</li>
-					<li>peerName: {conn.peerName}</li>
-					<li>peerDeviceId: {conn.peerDeviceId}</li>
-					<li>peerIsSessionOwner: {conn.peerIsSessionOwner}</li>
-					<li>lastPeerUpdateIn: {conn.lastPeerUpdateIn}</li>
-					<li>lastPeerUpdateOut: {conn.lastPeerUpdateOut}</li>
+					<li>peerType: {peerConn.peerType}</li>
+					<li>peerUserId: {peerConn.peerUserId}</li>
+					<li>peerName: {peerConn.peerName}</li>
+					<li>peerDeviceId: {peerConn.peerDeviceId}</li>
+					<li>peerIsSessionOwner: {peerConn.peerIsSessionOwner}</li>
+					<li>lastPeerUpdateIn: {peerConn.lastPeerUpdateIn}</li>
+					<li>lastPeerUpdateOut: {peerConn.lastPeerUpdateOut}</li>
 
 					<li>
-						<button on:click={() => conn.sendData({ type: 'hello' })}>Send Hello Msg</button>
+						<button on:click={() => peerConn.sendData({ type: 'hello' })}>Send Hello Msg</button>
 					</li>
 					
-					<li>numMsgsIn: {conn.numMsgsIn}</li>
-					<li>numMsgsOut: {conn.numMsgsOut}</li>
-					<li>lastMsgIn: {conn.lastMsgIn}</li>
-					<li>lastMsgOut: {conn.lastMsgOut}</li>
+					<li>numMsgsIn: {peerConn.numMsgsIn}</li>
+					<li>numMsgsOut: {peerConn.numMsgsOut}</li>
+					<li>lastMsgIn: {peerConn.lastMsgIn}</li>
+					<li>lastMsgOut: {peerConn.lastMsgOut}</li>
 
 					<li>
-						<button on:click={() => conn.ping()}>Send 1 Ping</button>
+						<button on:click={() => peerConn.ping()}>Send 1 Ping</button>
 					</li>
 
-					<li>roundTripAvg: {conn.roundTripAvg} ms</li>
-					<li>latencyAvg: {conn.latencyAvg} ms</li>
-					<li>peerClockOffsetAvg: {conn.peerClockOffsetAvg} ms</li>
-					<li>numPingsSinceLastPong: {conn.numPingsSinceLastPong}</li>
+					<li>roundTripAvg: {peerConn.roundTripAvg} ms</li>
+					<li>latencyAvg: {peerConn.latencyAvg} ms</li>
+					<li>peerClockOffsetAvg: {peerConn.peerClockOffsetAvg} ms</li>
+					<li>numPingsSinceLastPong: {peerConn.numPingsSinceLastPong}</li>
 
 					<li>
-						<button on:click={() => conn.startPings()}>Start Repeated Pings</button>
-						<button on:click={() => conn.stopPings()}>Stop Repeated Pings</button>
+						<button on:click={() => peerConn.startPings()}>Start Repeated Pings</button>
+						<button on:click={() => peerConn.stopPings()}>Stop Repeated Pings</button>
 					</li>
 				</ul>
 			</li>
