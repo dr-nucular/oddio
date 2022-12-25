@@ -8,6 +8,7 @@
 	export let showClock = false;
 	export let showSync = false;
 	export let showGroupSession = false;
+	export let showPeerSession = false;
 	export let showPeers = false;
 
 	// subscription vars
@@ -39,6 +40,8 @@
 <MagicButton text="Clock" color="#88cccc" moduleName="clock" visible={showClock}/>
 <br/>
 <MagicButton text="Group Session" color="#8888cc" moduleName="groupSession" visible={showGroupSession}/>
+<br/>
+<MagicButton text="Peer Session" color="#cc8888" moduleName="peerSession" visible={showPeerSession}/>
 <br/>
 <MagicButton text="Peers" color="#88cc88" moduleName="peers" visible={showPeers}/>
 <br/>

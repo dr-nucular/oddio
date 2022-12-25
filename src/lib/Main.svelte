@@ -6,6 +6,7 @@
 	import ClockModule from '$lib/Module-Clock.svelte';
 	import SyncModule from '$lib/Module-Sync.svelte';
 	import GroupSessionModule from '$lib/Module-GroupSession.svelte';
+	import PeerSessionModule from '$lib/Module-PeerSession.svelte';
 	import PeersModule from '$lib/Module-Peers.svelte';
 
 	let modules = {};
@@ -36,6 +37,10 @@
 
 {#if modules.groupSession?.visible}
 	<GroupSessionModule/>
+{/if}
+
+{#if modules.peerSession?.visible}
+	<PeerSessionModule/>
 {/if}
 
 {#if modules.peers?.visible}

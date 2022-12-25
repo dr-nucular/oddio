@@ -572,8 +572,6 @@ export const dbQueryGroupSessionDevices = async (groupSessionId, limitNum = 100,
 };
 
 
-
-
 /*
 groupSessions table
 - createdAt
@@ -606,6 +604,160 @@ sesh leader will have a sesh view that includes list of all devices
  * https://firebase.google.com/docs/database/web/offline-capabilities#section-latency
  * 
  */
+
+
+
+
+
+////////////////////////
+// PEER / PEERSESSION //
+////////////////////////
+
+export const dbGetPeer = async (id) => {
+	try {
+		const collectionName = 'peers';
+		const docRef = doc(db, collectionName, id);
+		const docSnap = await getDoc(docRef);
+		if (docSnap.exists()) {
+			console.log(`dbGetPeer (id: ${id}):`, docSnap.data());
+			return docSnap;
+		} else {
+			throw `No document with id: ${id}!`;
+		}
+	} catch (err) {
+		console.error(`dbGetPeer ERROR: ${err}`);
+	}
+};
+export const dbCreatePeer = async () => {
+	try {
+		const collectionName = 'peers';
+		const user = firebaseCurrentUser(true);
+		const ts = serverTimestamp();
+		const docSnap = await addDoc(collection(db, collectionName), {
+			createdAt: ts,
+			createdBy: user.uid,
+			//updatedAt: undefined,
+			//clockOffset: undefined,
+			//groupSession: undefined
+		});
+		console.log(`dbCreatePeer: New ${collectionName} doc created with id: ${docSnap.id}`);
+		return docSnap;
+	} catch (err) {
+		console.error(`dbCreatePeer ERROR: ${err}`);
+	}
+};
+export const dbUpdatePeer = async (id, data) => {
+	// data may have any of: .clockOffset, .baseLatency, .outputLatency, .latencyAdjustment
+	try {
+		const collectionName = 'peers';
+		const docRef = doc(db, collectionName, id);
+		const updateObj = { updatedAt: serverTimestamp() };
+		if (typeof data.clockOffset === 'number') {
+			updateObj.clockOffset = data.clockOffset;
+		}
+		if (typeof data.baseLatency === 'number') {
+			updateObj.baseLatency = data.baseLatency;
+		}
+		if (typeof data.outputLatency === 'number') {
+			updateObj.outputLatency = data.outputLatency;
+		}
+		if (typeof data.latencyAdjustment === 'number') {
+			updateObj.latencyAdjustment = data.latencyAdjustment;
+		}
+		await updateDoc(docRef, updateObj);
+		console.log(`dbUpdatePeer: doc id ${id} updated`);
+		return await getDoc(docRef);
+	} catch (err) {
+		console.error(`dbUpdatePeer ERROR: ${err}`);
+	}
+};
+
+
+
+
+export const dbGetPeerSession = async (id) => {
+	try {
+		const collectionName = 'peerSessions';
+		const docRef = doc(db, collectionName, id);
+		const docSnap = await getDoc(docRef);
+		if (docSnap.exists()) {
+			console.log(`dbGetPeerSession (id: ${id}):`, docSnap.data());
+			return docSnap;
+		} else {
+			throw `No document with id: ${id}!`;
+		}
+	} catch (err) {
+		console.error(`dbGetPeerSession ERROR: ${err}`);
+	}
+};
+export const dbCreatePeerSession = async () => {
+	try {
+		const collectionName = 'peerSessions';
+		const user = firebaseCurrentUser(true);
+		const ts = serverTimestamp();
+		const docSnap = await addDoc(collection(db, collectionName), {
+			createdAt: ts,
+			createdBy: user.uid,
+			updatedAt: ts,
+			//detail: undefined
+		});
+		console.log(`dbCreatePeerSession: New ${collectionName} doc created with id: ${docSnap.id}`);
+		return docSnap;
+	} catch (err) {
+		console.error(`dbCreatePeerSession ERROR: ${err}`);
+	}
+};
+// TODO: this query may change to be more like "get all recent sessions that i created or joined"
+export const dbQueryPeerSessions = async (limitNum = 100, offset = 0) => {
+	try {
+		const user = firebaseCurrentUser(true);
+		const q = query(collection(db, 'peerSessions'), where('createdBy', '==', user.uid), orderBy('updatedAt', 'desc'), limit(limitNum));
+		const querySnap = await getDocs(q);
+		const results = [];
+		querySnap.forEach((docSnap) => {
+			//console.log(`${docSnap.id} => ${JSON.stringify(docSnap.data(), null, 2)}`);
+			results.push(docSnap);
+			/*
+			results.push({
+				id: docSnap.id,
+				data: docSnap.data()
+			});
+			*/
+		});
+		console.log(`dbQueryPeerSessions: ${results.length} documents`);
+		return results;
+	} catch (err) {
+		console.error(`dbQueryPeerSessions ERROR: ${err}`);
+	}
+};
+
+export const dbQueryPeerSessionPeers = async (peerSessionId, limitNum = 100, offset = 0) => {
+	try {
+		//const user = firebaseCurrentUser(true);
+		const q = query(collection(db, 'peers'), where('peerSession', '==', peerSessionId), orderBy('updatedAt', 'desc'), limit(limitNum));
+		const querySnap = await getDocs(q);
+		const results = [];
+		querySnap.forEach((docSnap) => {
+			//console.log(`${docSnap.id} => ${JSON.stringify(docSnap.data(), null, 2)}`);
+			results.push(docSnap);
+			/*
+			results.push({
+				id: docSnap.id,
+				data: docSnap.data()
+			});
+			*/
+		});
+		console.log(`dbQueryPeerSessionPeers: ${results.length} documents`);
+		return results;
+	} catch (err) {
+		console.error(`dbQueryPeerSessionPeers ERROR: ${err}`);
+	}
+};
+
+
+
+
+
 
 ////// TEMP //////
 export const firebaseAddDoc = async (collectionName, data) => {
