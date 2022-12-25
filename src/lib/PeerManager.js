@@ -439,8 +439,6 @@ class PeerConnection {
 		this.latencyAvg = trimmedMean(latencies, 0.4);
 		const peerClockOffsets = this.pastPingPongData.map(v => v.peerClockOffset);
 		this.peerClockOffsetAvg = trimmedMean(peerClockOffsets, 0.4);
-
-		//this.updateManager();
 	}
 
 	//////////////////////// utility methods
