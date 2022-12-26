@@ -36,11 +36,20 @@ export const setDeviceId = (id) => {
 	window.localStorage.setItem('deviceId', id);
 };
 
+/*
 export const getGroupSessionId = () => {
 	return window.localStorage.getItem('groupSessionId');
 };
 export const setGroupSessionId = (id) => {
 	window.localStorage.setItem('groupSessionId', id);
+};
+*/
+
+export const getPeerSessionId = () => {
+	return window.localStorage.getItem('peerSessionId');
+};
+export const setPeerSessionId = (id) => {
+	window.localStorage.setItem('peerSessionId', id);
 };
 
 export const getUrlParams = () => {

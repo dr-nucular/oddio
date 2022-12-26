@@ -3,6 +3,7 @@ import QRCode from 'qrcode'; // https://www.npmjs.com/package/qrcode
 import { onMount, onDestroy } from 'svelte';
 import { dbCreatePeerSession, dbQueryPeerSessions } from '../firebase.js';
 import { sAuthInfo, sModules, sProject, sSyncSettings } from '../stores.js';
+import { getPeerSessionId, setPeerSessionId } from './utils';
 
 // subscription vars
 let authInfo = {};
@@ -44,17 +45,18 @@ const createPeerSession = async () => {
 	//const sesh = await dbCreatePeerSession();
 };
 
+const setPeerSesssion = (id) => {
+	setPeerSessionId(id);
+	peerSessionId = getPeerSessionId();
+	qrCanvas.style.display = 'none';
+};
 
 const generateQR = async (psid) => {
 	try {
-		const url = `${window.location.href}/?psid=${psid}`;
+		//const url = `${window.location.href}/?psid=${psid}`;
+		const url = `${window.location.origin}${window.location.pathname}?psid=${psid}`;
 		const result = await QRCode.toCanvas(qrCanvas, url);
 		qrCanvas.style.display = 'block';
-		//console.log(result);
-		/*
-		Make this route like /joinPeerSession/psid=ksjdfkjsdf and it will set localStorage value, then
-		redirect to the normal route without any qs vars.  auto-select "peers" section?
-		*/
 	} catch (err) {
 		console.error(err);
 	}
@@ -62,6 +64,7 @@ const generateQR = async (psid) => {
 
 onMount(() => {
 	console.log(`ON MOUNT`);
+	peerSessionId = getPeerSessionId(); // grabs from localStorage
 	getPeerSessions();
 });
 onDestroy(() => {
@@ -100,8 +103,15 @@ onDestroy(() => {
 		<ul>
 		{#each peerSessions as ps}
 			<li>
-				{ps.id}: (created {ps.data.createdAt})
-				<button on:click={() => generateQR(ps.id)} bind:this={qrButton}>Join</button>
+				id: {ps.id}
+				<ul>
+					<li>(created {ps.data.createdAt})</li>
+					{#if ps.id === peerSessionId}
+						<li>*** currently active: <button on:click={() => generateQR(ps.id)} bind:this={qrButton}>Invite others</button></li>
+					{:else}
+						<li><button on:click={() => setPeerSesssion(ps.id)}>Join</button></li>
+					{/if}
+				</ul>
 			</li>
 		{/each}
 		</ul>

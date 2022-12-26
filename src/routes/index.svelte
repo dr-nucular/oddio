@@ -4,13 +4,14 @@
 
 <script>
 	import '../app.css';
+	import { onMount, onDestroy } from 'svelte';
+	import { sAuthInfo } from '../stores.js';
+	import { firebaseCreateUserObserver } from '../firebase.js';
+	import { getUrlParams, setPeerSessionId } from '$lib/utils.js';
 	import Logo from '$lib/Logo.svelte';
 	import TopNav from '$lib/TopNav.svelte';
 	import LeftNav from '$lib/LeftNav.svelte';
 	import Main from '$lib/Main.svelte';
-	import { firebaseCreateUserObserver } from '../firebase.js';
-	import { sAuthInfo } from '../stores.js';
-	import { onMount, onDestroy } from 'svelte';
 
 	const logoName = "..::!!??";
 	let authInfo = {};
@@ -52,6 +53,27 @@
 			sAuthInfo.set(authInfo);
 			console.log(`firebaseCreateUserObserver callback: authInfo = ${JSON.stringify(authInfo, null, 2)}`);
 		});
+
+		// look for certain querystring vars and save to local storage.
+		// then remove those qs vars from url and refresh
+		const urlParams = getUrlParams();
+		let replaceLoc = false;
+		if (urlParams.psid) {
+			setPeerSessionId(urlParams.psid);
+			delete urlParams.psid;
+			replaceLoc = true;
+		}
+		if (replaceLoc) {
+			let url = `${window.location.origin}${window.location.pathname}`;
+			let qsParamStr = '';
+			if (Object.keys(urlParams).length) {
+				qsParamStr = Object.keys(urlParams).map((key) => {
+					return `${encodeURIComponent(key)}=${encodeURIComponent(urlParams[key])}`
+				}).join('&');
+				url += `?${qsParamStr}`;
+			}
+			window.location.replace(url);
+		}
 	});
 
 /*
