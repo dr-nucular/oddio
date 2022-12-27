@@ -1,8 +1,9 @@
 <script>
 	import QRCode from 'qrcode'; // https://www.npmjs.com/package/qrcode
 	import { onMount, onDestroy } from 'svelte';
+	import { dbGetPeerSession } from '../firebase.js';
 	import { sAuthInfo, sModules } from '../stores.js';
-	import { getUrlParams } from './utils.js';
+	import { getPeerSessionId } from './utils';
 	import PeerManager from './PeerManager.js';
 	let Peer;
 	if (typeof navigator !== "undefined") {
@@ -16,9 +17,10 @@
 	let modules = {};
 	
 	// other states
+	let peerSessionId;
+	let peerSession;
 	const hostPeerId = 'yay';
 	let pMan;
-	//let myPeerInfo;
 	let peerConns = []; // array of PeerConnections
 	let qrCodeCanvas;
 
@@ -31,8 +33,15 @@
 	$: cssVarStyles = `--bgColor:${modules.peers?.bgColor}`;
 
 	// onMount/onDestroy
-	onMount(() => {
+	onMount(async () => {
 		console.log(`Peers ON MOUNT`);
+
+		peerSessionId = getPeerSessionId();
+		if (peerSessionId) {
+			peerSession = await dbGetPeerSession(peerSessionId);
+			// TODO: tie this into stores.js so other views/listeners are updated
+		}
+
 		pMan = new PeerManager();
 	});
 	onDestroy(() => {
@@ -83,6 +92,19 @@
 	style={cssVarStyles}
 	class="content-module">
 	<h2>&starf;&nbsp; Peers &nbsp;&starf;</h2><hr/>
+
+	{#if peerSession}
+		Your Peer Session info:
+		<ul>
+			<li>id: {peerSession.id}</li>
+			<li>createdAt: {peerSession.data().createdAt}</li>
+			<li>createdBy: {peerSession.data().createdBy}</li>
+			<li>updatedAt: {peerSession.data().updatedAt}</li>
+			<li># peers: ... </li>
+		</ul>
+	{:else}
+		You need to create/join a peer session before you can connect as a peer.<br/><br/>
+	{/if}
 
 	PeerManager: <button on:click={() => pmInit('host')}>Init as Host</button>
 		or <button on:click={() => pmInit('controller')}>Init as Controller</button><br/>

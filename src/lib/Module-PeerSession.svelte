@@ -99,7 +99,7 @@ onDestroy(() => {
 	You are not in a peer session.
 
 	{#if peerSessions?.length}
-		Join one of these?
+		Recent Peer Sessions:
 		<ul>
 		{#each peerSessions as ps}
 			<li>
@@ -116,7 +116,7 @@ onDestroy(() => {
 		{/each}
 		</ul>
 	{:else}
-		There aren't any to join, but you can create one and share a link with others.<br/><br/>
+		No recent Peer Sessions found. Create one and share a link with others.<br/><br/>
 	{/if}
 
 	<canvas bind:this={qrCanvas}></canvas>
