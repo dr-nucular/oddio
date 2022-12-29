@@ -1,20 +1,20 @@
 <script>
 import QRCode from 'qrcode'; // https://www.npmjs.com/package/qrcode
 import { onMount, onDestroy } from 'svelte';
-import { dbCreatePeerSession, dbQueryPeerSessions } from '../firebase.js';
-import { sAuthInfo, sModules, sProject, sSyncSettings } from '../stores.js';
+import { dbCreatePeerSession, dbGetPeerSession, dbQueryPeerSessions } from '../firebase.js';
+import { sAuthInfo, sModules, sProject, sSyncSettings, sPeerSession } from '../stores.js';
 import { getPeerSessionId, setPeerSessionId } from './utils';
 
 // subscription vars
 let authInfo = {};
 let modules = {};
 let syncSettings = {};
+let peerSession;
 
 // other states
 let peerSessionId;
 let peerSessions;
 let createButton;
-let qrButton;
 let qrCanvas;
 let project;
 
@@ -26,6 +26,46 @@ const unsubModules = sModules.subscribe(obj => modules = obj);
 $: cssVarStyles = `--bgColor:${modules.peerSession?.bgColor}`;
 const unsubProject = sProject.subscribe(obj => project = obj);
 const unsubSyncSettings = sSyncSettings.subscribe(obj => syncSettings = obj);
+const unsubPeerSession = sPeerSession.subscribe(obj => peerSession = obj);
+
+
+onMount(() => {
+	console.log(`ON MOUNT`);
+
+	if (authInfo.isLoggedIn && !peerSession) {
+		setPeerSession(); // from localStorage
+	}
+
+	peerSessionId = getPeerSessionId(); // grabs from localStorage
+	getPeerSessions();
+});
+onDestroy(() => {
+	unsubAuthInfo();
+	unsubModules();
+	unsubProject();
+	unsubSyncSettings();
+	unsubPeerSession();
+});
+
+
+
+// initialize peerSession if the store is empty
+const setPeerSession = async (id) => {
+	// use optional id provided, or look in localstorage for a prior peerSessionId...
+	if (id) {
+		qrCanvas.style.display = 'none';
+		setPeerSessionId(id);
+	}
+	let priorPeerSessionId = getPeerSessionId();
+	if (priorPeerSessionId) {
+		// if there, load it from db and save to store
+		const psData = await dbGetPeerSession(priorPeerSessionId); // TODO: catch errs (i.e. a stale sesh)
+		sPeerSession.set(psData);
+	}
+};
+
+
+
 
 
 const getPeerSessions = async () => {
@@ -45,11 +85,14 @@ const createPeerSession = async () => {
 	//const sesh = await dbCreatePeerSession();
 };
 
+/*
 const setPeerSesssion = (id) => {
-	setPeerSessionId(id);
-	peerSessionId = getPeerSessionId();
 	qrCanvas.style.display = 'none';
+	setPeerSessionId(id);
+	setPeerSession();
+	
 };
+*/
 
 const generateQR = async (psid) => {
 	try {
@@ -62,17 +105,7 @@ const generateQR = async (psid) => {
 	}
 }
 
-onMount(() => {
-	console.log(`ON MOUNT`);
-	peerSessionId = getPeerSessionId(); // grabs from localStorage
-	getPeerSessions();
-});
-onDestroy(() => {
-	unsubAuthInfo();
-	unsubModules();
-	unsubProject();
-	unsubSyncSettings();
-});
+
 
 </script>
 
@@ -82,21 +115,21 @@ onDestroy(() => {
 	class="content-module">
 	<h2>&starf;&nbsp; Peer Session &nbsp;&starf;</h2><hr/>
 
-	{#if authInfo.isLoggedIn}
-		Logged in: {authInfo.email}
+	{#if peerSession}
+		Your Peer Session info:
+		<ul>
+			<li>id: {peerSession.id}</li>
+			<li>createdBy: {peerSession.data().createdBy}</li>
+			<li>createdAt: {peerSession.data().createdAt.toDate().toUTCString()}</li>
+			<li>updatedAt: {peerSession.data().updatedAt.toDate().toUTCString()}</li>
+			<li>hours diff: {(Date.now() - peerSession.data().updatedAt.toDate().valueOf()) / (1000 * 60 * 60)}</li>
+			<li># peers: ... </li>
+			<li><button on:click={() => generateQR(peerSession.id)}>Invite others to join</button></li>
+		</ul>
 	{:else}
-		Logged out
+		Please create or join a peer session.<br/><br/>
 	{/if}
-	<br/>
-
-	{#if project}
-		Project: {project?.name}
-	{:else}
-		Project not set
-	{/if}
-	<br/><br/>
-
-	You are not in a peer session.
+		
 
 	{#if peerSessions?.length}
 		Recent Peer Sessions:
@@ -107,9 +140,9 @@ onDestroy(() => {
 				<ul>
 					<li>(created {ps.data.createdAt})</li>
 					{#if ps.id === peerSessionId}
-						<li>*** currently active: <button on:click={() => generateQR(ps.id)} bind:this={qrButton}>Invite others</button></li>
+						<li>*** currently active: <button on:click={() => generateQR(ps.id)}>Invite others</button></li>
 					{:else}
-						<li><button on:click={() => setPeerSesssion(ps.id)}>Join</button></li>
+						<li><button on:click={() => setPeerSession(ps.id)}>Join</button></li>
 					{/if}
 				</ul>
 			</li>

@@ -64,3 +64,6 @@ export let sSyncSettings = writable({
 	latencyAdjustment: 0,
 	lastUpdated: 0
 });
+
+export let sPeerSession = writable(null);
+export let sPeerSessions = writable([]);

@@ -1,7 +1,7 @@
 <script>
 	import { onDestroy } from 'svelte';
 	import MagicButton from './MagicButton.svelte';
-	import { sAuthInfo, sCurProject } from '../stores.js';
+	import { sAuthInfo, sCurProject, sPeerSession } from '../stores.js';
 
 	// exported attributes
 	export let showProjects = false;
@@ -15,6 +15,7 @@
 	let notLoggedIn = true;
 	let noCurProject = true;
 	let noAccessYet = true;
+	let peerSession;
 
 	// subscriptions
 	const unsubAuthInfo = sAuthInfo.subscribe(obj => {
@@ -25,10 +26,12 @@
 		noCurProject = obj === null;
 		noAccessYet = notLoggedIn || noCurProject;
 	});
+	const unsubPeerSession = sPeerSession.subscribe(obj => peerSession = obj);
 
 	onDestroy(() => {
 		unsubAuthInfo();
 		unsubCurProject();
+		unsubPeerSession();
 	});
 
 </script>
@@ -41,9 +44,9 @@
 <br/>
 <MagicButton text="Group Session" color="#8888cc" moduleName="groupSession" visible={showGroupSession}/>
 <br/>
-<MagicButton text="Peer Session" color="#cc8888" moduleName="peerSession" visible={showPeerSession}/>
+<MagicButton text="Peer Session" disabled={notLoggedIn} color="#cc8888" moduleName="peerSession" visible={showPeerSession}/>
 <br/>
-<MagicButton text="Peers" color="#88cc88" moduleName="peers" visible={showPeers}/>
+<MagicButton text="Peers" disabled={notLoggedIn || !peerSession} color="#88cc88" moduleName="peers" visible={showPeers}/>
 <br/>
 
 <style>

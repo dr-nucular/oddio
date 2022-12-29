@@ -1,90 +1,86 @@
 <script>
-	import QRCode from 'qrcode'; // https://www.npmjs.com/package/qrcode
-	import { onMount, onDestroy } from 'svelte';
-	import { dbGetPeerSession } from '../firebase.js';
-	import { sAuthInfo, sModules } from '../stores.js';
-	import { getPeerSessionId } from './utils';
-	import PeerManager from './PeerManager.js';
-	let Peer;
-	if (typeof navigator !== "undefined") {
-		import("peerjs").then(imported => {
-			Peer = imported.Peer;
-		});
-	}
-
-	// subscription vars
-	let authInfo = {};
-	let modules = {};
-	
-	// other states
-	let peerSessionId;
-	let peerSession;
-	const hostPeerId = 'yay';
-	let pMan;
-	let peerConns = []; // array of PeerConnections
-	let qrCodeCanvas;
-
-	let domLogs = [];
-	let domLogData = '';
-
-	// store subscriptions
-	const unsubAuthInfo = sAuthInfo.subscribe(obj => authInfo = obj);
-	const unsubModules = sModules.subscribe(obj => modules = obj);
-	$: cssVarStyles = `--bgColor:${modules.peers?.bgColor}`;
-
-	// onMount/onDestroy
-	onMount(async () => {
-		console.log(`Peers ON MOUNT`);
-
-		peerSessionId = getPeerSessionId();
-		if (peerSessionId) {
-			peerSession = await dbGetPeerSession(peerSessionId);
-			// TODO: tie this into stores.js so other views/listeners are updated
-		}
-
-		pMan = new PeerManager();
+import QRCode from 'qrcode'; // https://www.npmjs.com/package/qrcode
+import { onMount, onDestroy } from 'svelte';
+import { dbGetPeerSession } from '../firebase.js';
+import { sAuthInfo, sModules, sPeerSession } from '../stores.js';
+import { getPeerSessionId } from './utils';
+import PeerManager from './PeerManager.js';
+let Peer;
+if (typeof navigator !== "undefined") {
+	import("peerjs").then(imported => {
+		Peer = imported.Peer;
 	});
-	onDestroy(() => {
-		unsubAuthInfo();
-		unsubModules();
-	});
+}
+
+// subscription vars
+let authInfo = {};
+let modules = {};
+let peerSession;
+
+// other states
+let peerSessionId;
+const hostPeerId = 'yay';
+let pMan;
+let peerConns = []; // array of PeerConnections
+let qrCodeCanvas;
+
+let domLogs = [];
+let domLogData = '';
 
 
-	const pmInit = async (myType) => {
-		pMan.config({
-			myType,
-			myUserId: authInfo.uid,
-			myName: authInfo.displayName,
-			sessionOwner: myType === 'host', // will come from db eventually
-			logCallback: (str) => {
-				domLogs.unshift(str);
-				if (domLogs.length > 10) {
-					domLogs.pop();
-				}
-				domLogData = domLogs.join(`\n`);
-			},
-			peerMgrUpdatedCB: (pm) => {
-				pMan = pm; // triggers reactivity
-			},
-			peerConnsUpdatedCB: (pc) => {
-				peerConns = pc; // triggers reactivity
-			},
-		});
-		await pMan.init(myType);
-		if (pMan.sessionOwner) {
-			// show QRCode for others to link to
-			try {
-				const url = `${window.location.href}?gsid=abcde&hostPeerId=${pMan.peerSelf.id}`;
-				const result = await QRCode.toCanvas(qrCodeCanvas, url);
-				qrCodeCanvas.style.display = 'block';
-				//console.log(result);
-			} catch (err) {
-				console.error(err);
+
+// store subscriptions
+const unsubAuthInfo = sAuthInfo.subscribe(obj => authInfo = obj);
+const unsubModules = sModules.subscribe(obj => modules = obj);
+$: cssVarStyles = `--bgColor:${modules.peers?.bgColor}`;
+const unsubPeerSession = sPeerSession.subscribe(obj => peerSession = obj);
+
+
+// onMount/onDestroy
+onMount(async () => {
+	console.log(`Peers ON MOUNT`);
+	pMan = new PeerManager();
+});
+onDestroy(() => {
+	unsubAuthInfo();
+	unsubModules();
+	unsubPeerSession();
+});
+
+
+const pmInit = async (myType) => {
+	pMan.config({
+		myType,
+		myUserId: authInfo.uid,
+		myName: authInfo.displayName,
+		sessionOwner: myType === 'host', // will come from db eventually
+		logCallback: (str) => {
+			domLogs.unshift(str);
+			if (domLogs.length > 10) {
+				domLogs.pop();
 			}
+			domLogData = domLogs.join(`\n`);
+		},
+		peerMgrUpdatedCB: (pm) => {
+			pMan = pm; // triggers reactivity
+		},
+		peerConnsUpdatedCB: (pc) => {
+			peerConns = pc; // triggers reactivity
+		},
+	});
+	await pMan.init(myType);
+	if (pMan.sessionOwner) {
+		// show QRCode for others to link to
+		try {
+			const url = `${window.location.href}?gsid=abcde&hostPeerId=${pMan.peerSelf.id}`;
+			const result = await QRCode.toCanvas(qrCodeCanvas, url);
+			qrCodeCanvas.style.display = 'block';
+			//console.log(result);
+		} catch (err) {
+			console.error(err);
 		}
-	};
-
-
+	}
+};
 </script>
 
 
@@ -103,7 +99,7 @@
 			<li># peers: ... </li>
 		</ul>
 	{:else}
-		You need to create/join a peer session before you can connect as a peer.<br/><br/>
+		Please create or join a peer session.<br/><br/>
 	{/if}
 
 	PeerManager: <button on:click={() => pmInit('host')}>Init as Host</button>

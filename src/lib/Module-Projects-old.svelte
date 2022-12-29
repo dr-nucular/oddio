@@ -18,7 +18,7 @@
 
 
 	const shouldRequestProjects = () => {
-		return !!(authInfo.isLoggedIn & !projects.length);
+		return !!(authInfo.isLoggedIn && !projects.length);
 	};
 
 	const requestProjects = async () => {

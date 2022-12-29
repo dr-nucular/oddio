@@ -707,11 +707,17 @@ export const dbCreatePeerSession = async () => {
 		console.error(`dbCreatePeerSession ERROR: ${err}`);
 	}
 };
-// TODO: this query may change to be more like "get all recent sessions that i created or joined"
+// TODO: this query may change to be more like
+// "get all sessions that i created or joined that have been updated (used) within the last hour"
 export const dbQueryPeerSessions = async (limitNum = 100, offset = 0) => {
 	try {
 		const user = firebaseCurrentUser(true);
-		const q = query(collection(db, 'peerSessions'), where('createdBy', '==', user.uid), orderBy('updatedAt', 'desc'), limit(limitNum));
+		const q = query(
+			collection(db, 'peerSessions'),
+			where('createdBy', '==', user.uid),
+			orderBy('updatedAt', 'desc'),
+			limit(limitNum)
+		);
 		const querySnap = await getDocs(q);
 		const results = [];
 		querySnap.forEach((docSnap) => {
