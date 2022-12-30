@@ -7,7 +7,7 @@
 	import { onMount, onDestroy } from 'svelte';
 	import { sAuthInfo } from '../stores.js';
 	import { firebaseCreateUserObserver } from '../firebase.js';
-	import { getUrlParams, setPeerSessionId } from '$lib/utils.js';
+	import { getUrlParams, lsSetPeerSessionId } from '$lib/utils.js';
 	import Logo from '$lib/Logo.svelte';
 	import TopNav from '$lib/TopNav.svelte';
 	import LeftNav from '$lib/LeftNav.svelte';
@@ -59,7 +59,7 @@
 		const urlParams = getUrlParams();
 		let replaceLoc = false;
 		if (urlParams.psid) {
-			setPeerSessionId(urlParams.psid);
+			lsSetPeerSessionId(urlParams.psid);
 			delete urlParams.psid;
 			replaceLoc = true;
 		}

@@ -3,7 +3,7 @@ import QRCode from 'qrcode'; // https://www.npmjs.com/package/qrcode
 import { onMount, onDestroy } from 'svelte';
 import { dbGetPeerSession } from '../firebase.js';
 import { sAuthInfo, sModules, sPeerSession } from '../stores.js';
-import { getPeerSessionId } from './utils';
+import { lsGetPeerSessionId } from './utils';
 import PeerManager from './PeerManager.js';
 let Peer;
 if (typeof navigator !== "undefined") {
@@ -22,7 +22,7 @@ let peerSessionId;
 const hostPeerId = 'yay';
 let pMan;
 let peerConns = []; // array of PeerConnections
-let qrCodeCanvas;
+let qrCanvas;
 
 let domLogs = [];
 let domLogData = '';
@@ -33,12 +33,19 @@ let domLogData = '';
 const unsubAuthInfo = sAuthInfo.subscribe(obj => authInfo = obj);
 const unsubModules = sModules.subscribe(obj => modules = obj);
 $: cssVarStyles = `--bgColor:${modules.peers?.bgColor}`;
-const unsubPeerSession = sPeerSession.subscribe(obj => peerSession = obj);
-
+const unsubPeerSession = sPeerSession.subscribe(obj => {
+	if (qrCanvas) qrCanvas.style.display = 'none';
+	peerSession = obj;
+});
 
 // onMount/onDestroy
 onMount(async () => {
 	console.log(`Peers ON MOUNT`);
+	if (authInfo.isLoggedIn && !peerSession) {
+		if (!peerSession) {
+			await initPeerSession();
+		}
+	}
 	pMan = new PeerManager();
 });
 onDestroy(() => {
@@ -48,12 +55,28 @@ onDestroy(() => {
 });
 
 
+// initialize peerSession if the store is empty
+const initPeerSession = async () => {
+	try {
+		// look in localstorage for a prior peerSessionId saved there...
+		const id = lsGetPeerSessionId();
+		if (id) {
+			// if there, load it from db and save to store
+			const ps = await dbGetPeerSession(id);
+			const psUnpacked = { id: ps.id, data: ps.data() };
+			const tooOld = (Date.now() - psUnpacked.data.updatedAt.toDate().valueOf()) / (1000 * 60 * 60) > MAX_AGE_HOURS;
+			!tooOld && sPeerSession.set(psUnpacked);
+		}
+	} catch (err) {
+		console.error(`initPeerSession() ERROR:`, err);
+	}
+};
+
 const pmInit = async (myType) => {
 	pMan.config({
 		myType,
 		myUserId: authInfo.uid,
 		myName: authInfo.displayName,
-		sessionOwner: myType === 'host', // will come from db eventually
 		logCallback: (str) => {
 			domLogs.unshift(str);
 			if (domLogs.length > 10) {
@@ -69,18 +92,21 @@ const pmInit = async (myType) => {
 		},
 	});
 	await pMan.init(myType);
-	if (pMan.sessionOwner) {
-		// show QRCode for others to link to
-		try {
-			const url = `${window.location.href}?gsid=abcde&hostPeerId=${pMan.peerSelf.id}`;
-			const result = await QRCode.toCanvas(qrCodeCanvas, url);
-			qrCodeCanvas.style.display = 'block';
-			//console.log(result);
-		} catch (err) {
-			console.error(err);
+};
+
+const generateQR = async (psid) => {
+	try {
+		//const url = `${window.location.href}/?psid=${psid}`;
+		const url = `${window.location.origin}${window.location.pathname}?psid=${psid}`;
+		if (qrCanvas) {
+			const result = await QRCode.toCanvas(qrCanvas, url);
+			qrCanvas.style.display = 'block';
 		}
+	} catch (err) {
+		console.error(err);
 	}
 };
+
 </script>
 
 
@@ -90,21 +116,29 @@ const pmInit = async (myType) => {
 	<h2>&starf;&nbsp; Peers &nbsp;&starf;</h2><hr/>
 
 	{#if peerSession}
-		Your Peer Session info:
+		Active Peer Session:
 		<ul>
 			<li>id: {peerSession.id}</li>
-			<li>createdAt: {peerSession.data().createdAt}</li>
-			<li>createdBy: {peerSession.data().createdBy}</li>
-			<li>updatedAt: {peerSession.data().updatedAt}</li>
+			<li>createdBy: {peerSession.data.createdBy}</li>
+			<li>last updated: {(Date.now() - peerSession.data.updatedAt.toDate().valueOf()) / (1000 * 60 * 60)} hours ago</li>
 			<li># peers: ... </li>
+			<li><button on:click={() => generateQR(peerSession.id)}>Invite others to join</button></li>
 		</ul>
+		<canvas bind:this={qrCanvas}></canvas>
 	{:else}
-		Please create or join a peer session.<br/><br/>
+		You don't have an active Peer Session at the moment.
+		<ul>
+			<li>Join a friend's peer session from a link or QRcode</li>
+			<li>Create a new peer session that you can share</li>
+		</ul>
 	{/if}
 
-	PeerManager: <button on:click={() => pmInit('host')}>Init as Host</button>
-		or <button on:click={() => pmInit('controller')}>Init as Controller</button><br/>
-	<canvas bind:this={qrCodeCanvas}></canvas><br/>
+	Join as a
+	<button on:click={() => pmInit('host')}>Game Host (computer/tablet)</button>
+	or
+	<button on:click={() => pmInit('controller')}>Player (phone/tablet)</button><br/>
+
+
 	
 	{#if pMan?.peerSelf}
 		Your Peer info:
@@ -114,7 +148,6 @@ const pmInit = async (myType) => {
 			<li>myUserId: {pMan.myUserId}</li>
 			<li>myName: {pMan.myName}</li>
 			<li>myDeviceId: {pMan.myDeviceId}</li>
-			<li>sessionOwner: {pMan.sessionOwner}</li>
 		</ul>
 	{:else}
 		Peer info has not yet been initialized.<br/><br/>
@@ -135,7 +168,6 @@ const pmInit = async (myType) => {
 					<li>peerUserId: {peerConn.peerUserId}</li>
 					<li>peerName: {peerConn.peerName}</li>
 					<li>peerDeviceId: {peerConn.peerDeviceId}</li>
-					<li>peerIsSessionOwner: {peerConn.peerIsSessionOwner}</li>
 					<li>lastPeerUpdateIn: {peerConn.lastPeerUpdateIn}</li>
 					<li>lastPeerUpdateOut: {peerConn.lastPeerUpdateOut}</li>
 
@@ -189,5 +221,6 @@ const pmInit = async (myType) => {
 	}
 	canvas {
 		display: none;
+		margin: 0 auto 20px;
 	}
 </style>

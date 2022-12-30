@@ -45,11 +45,15 @@ export const setGroupSessionId = (id) => {
 };
 */
 
-export const getPeerSessionId = () => {
+export const lsGetPeerSessionId = () => {
 	return window.localStorage.getItem('peerSessionId');
 };
-export const setPeerSessionId = (id) => {
-	window.localStorage.setItem('peerSessionId', id);
+export const lsSetPeerSessionId = (id) => {
+	if (id) {
+		window.localStorage.setItem('peerSessionId', id);
+	} else {
+		window.localStorage.removeItem('peerSessionId');
+	}
 };
 
 export const getUrlParams = () => {

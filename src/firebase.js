@@ -709,7 +709,8 @@ export const dbCreatePeerSession = async () => {
 };
 // TODO: this query may change to be more like
 // "get all sessions that i created or joined that have been updated (used) within the last hour"
-export const dbQueryPeerSessions = async (limitNum = 100, offset = 0) => {
+// https://firebase.google.com/docs/firestore/query-data/queries
+export const dbGetMyPeerSessions = async (limitNum = 100, offset = 0) => {
 	try {
 		const user = firebaseCurrentUser(true);
 		const q = query(
@@ -730,10 +731,10 @@ export const dbQueryPeerSessions = async (limitNum = 100, offset = 0) => {
 			});
 			*/
 		});
-		console.log(`dbQueryPeerSessions: ${results.length} documents`);
+		console.log(`dbGetMyPeerSessions: ${results.length} documents`);
 		return results;
 	} catch (err) {
-		console.error(`dbQueryPeerSessions ERROR: ${err}`);
+		console.error(`dbGetMyPeerSessions ERROR: ${err}`);
 	}
 };
 

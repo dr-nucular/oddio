@@ -37,7 +37,6 @@ class PeerManager {
 		this.myUserId = undefined;
 		this.myName = undefined;
 		this.myDeviceId = undefined;
-		this.sessionOwner = false;
 
 		this.logCallback = undefined;
 		this.peerMgrUpdatedCB = undefined; // triggered only from peer.open callback right now
@@ -52,7 +51,6 @@ class PeerManager {
 			this.myUserId = undefined;
 			this.myName = undefined;
 			this.myDeviceId = undefined;
-			this.sessionOwner = false;
 			this.logCallback = undefined;
 			this.peerConnsUpdatedCB = undefined;
 		}
@@ -60,7 +58,6 @@ class PeerManager {
 		if (opts.myUserId) this.myUserId = opts.myUserId;
 		if (opts.myName) this.myName = opts.myName;
 		if (opts.myDeviceId) this.myDeviceId = opts.myDeviceId;
-		if (opts.sessionOwner) this.sessionOwner = opts.sessionOwner;
 		if (opts.logCallback) this.logCallback = opts.logCallback;
 		if (opts.peerMgrUpdatedCB) this.peerMgrUpdatedCB = opts.peerMgrUpdatedCB;
 		if (opts.peerConnsUpdatedCB) this.peerConnsUpdatedCB = opts.peerConnsUpdatedCB;
@@ -231,7 +228,6 @@ class PeerConnection {
 		this.peerUserId = undefined;
 		this.peerName = undefined;
 		this.peerDeviceId = undefined;
-		this.peerIsSessionOwner = false;
 
 		this.createdOn = undefined;
 
@@ -267,7 +263,6 @@ class PeerConnection {
 							peerUserId: this.peerManager.myUserId,
 							peerName: this.peerManager.myName,
 							peerDeviceId: this.peerManager.myDeviceId,
-							peerIsSessionOwner: this.peerManager.sessionOwner,
 						},
 						//label: 'needs to be unique',
 						//serialization: 'binary',
@@ -281,7 +276,6 @@ class PeerConnection {
 					if (metadata?.peerUserId !== undefined) this.peerUserId = metadata.peerUserId;
 					if (metadata?.peerName !== undefined) this.peerName = metadata.peerName;
 					if (metadata?.peerDeviceId !== undefined) this.peerDeviceId = metadata.peerDeviceId;
-					if (metadata?.peerIsSessionOwner !== undefined) this.peerIsSessionOwner = metadata.peerIsSessionOwner;
 					this.lastPeerUpdateIn = this.createdOn;
 				}
 
@@ -353,7 +347,6 @@ class PeerConnection {
 			peerUserId: this.peerManager.myUserId,
 			peerName: this.peerManager.myName,
 			peerDeviceId: this.peerManager.myDeviceId,
-			peerIsSessionOwner: this.peerManager.sessionOwner,
 		};
 		const sendSuccess = this.sendData(msg, true);
 		if (sendSuccess) {
@@ -395,7 +388,6 @@ class PeerConnection {
 			this.peerUserId = data.peerUserId;
 			this.peerName = data.peerName;
 			this.peerDeviceId = data.peerDeviceId;
-			this.peerIsSessionOwner = data.peerIsSessionOwner;
 			this.lastPeerUpdateIn = now;
 		} else if (data.type === 'ping') {
 			// just return a pong msg
