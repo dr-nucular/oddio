@@ -15,7 +15,7 @@
 	let notLoggedIn = true;
 	let noCurProject = true;
 	let noAccessYet = true;
-	let peerSession;
+	//let peerSession;
 
 	// subscriptions
 	const unsubAuthInfo = sAuthInfo.subscribe(obj => {
@@ -26,12 +26,12 @@
 		noCurProject = obj === null;
 		noAccessYet = notLoggedIn || noCurProject;
 	});
-	const unsubPeerSession = sPeerSession.subscribe(obj => peerSession = obj);
+	//const unsubPeerSession = sPeerSession.subscribe(obj => peerSession = obj);
 
 	onDestroy(() => {
 		unsubAuthInfo();
 		unsubCurProject();
-		unsubPeerSession();
+		//unsubPeerSession();
 	});
 
 </script>
@@ -46,7 +46,7 @@
 <br/>
 <MagicButton text="Peer Session" disabled={notLoggedIn} color="#cc8888" moduleName="peerSession" visible={showPeerSession}/>
 <br/>
-<MagicButton text="Peers" disabled={notLoggedIn || !peerSession} color="#88cc88" moduleName="peers" visible={showPeers}/>
+<MagicButton text="Peers" disabled={notLoggedIn} color="#88cc88" moduleName="peers" visible={showPeers}/>
 <br/>
 
 <style>

@@ -628,7 +628,37 @@ export const dbGetPeer = async (id) => {
 		console.error(`dbGetPeer ERROR: ${err}`);
 	}
 };
-export const dbCreatePeer = async () => {
+// TODO: this query may change to be more like
+// "get all peers that i created that have been updated (used) within the last hour"
+// https://firebase.google.com/docs/firestore/query-data/queries
+export const dbGetMyPeers = async (limitNum = 100, offset = 0) => {
+	try {
+		const user = firebaseCurrentUser(true);
+		const q = query(
+			collection(db, 'peers'),
+			where('createdBy', '==', user.uid),
+			orderBy('updatedAt', 'desc'),
+			limit(limitNum)
+		);
+		const querySnap = await getDocs(q);
+		const results = [];
+		querySnap.forEach((docSnap) => {
+			//console.log(`${docSnap.id} => ${JSON.stringify(docSnap.data(), null, 2)}`);
+			results.push(docSnap);
+			/*
+			results.push({
+				id: docSnap.id,
+				data: docSnap.data()
+			});
+			*/
+		});
+		console.log(`dbGetMyPeers: ${results.length} documents`);
+		return results;
+	} catch (err) {
+		console.error(`dbGetMyPeers ERROR: ${err}`);
+	}
+};
+export const dbCreatePeer = async (data) => {
 	try {
 		const collectionName = 'peers';
 		const user = firebaseCurrentUser(true);
@@ -636,9 +666,7 @@ export const dbCreatePeer = async () => {
 		const docSnap = await addDoc(collection(db, collectionName), {
 			createdAt: ts,
 			createdBy: user.uid,
-			//updatedAt: undefined,
-			//clockOffset: undefined,
-			//groupSession: undefined
+			updatedAt: ts,
 		});
 		console.log(`dbCreatePeer: New ${collectionName} doc created with id: ${docSnap.id}`);
 		return docSnap;
@@ -647,23 +675,24 @@ export const dbCreatePeer = async () => {
 	}
 };
 export const dbUpdatePeer = async (id, data) => {
-	// data may have any of: .clockOffset, .baseLatency, .outputLatency, .latencyAdjustment
+	// data (optional object) may have any of: .peerSession, .peerType, .peerServerId
 	try {
 		const collectionName = 'peers';
 		const docRef = doc(db, collectionName, id);
+		// TODO: ensure that current user is also the createdBy value
 		const updateObj = { updatedAt: serverTimestamp() };
-		if (typeof data.clockOffset === 'number') {
-			updateObj.clockOffset = data.clockOffset;
+		
+		// convert reference string for peerSession ref, i.e. "peerSessions/idString"
+		if (typeof data?.peerSession === 'string') {
+			updateObj.peerSession = doc(db, data.peerSession);
 		}
-		if (typeof data.baseLatency === 'number') {
-			updateObj.baseLatency = data.baseLatency;
+		if (typeof data?.peerType === 'string') {
+			updateObj.peerType = data.peerType;
 		}
-		if (typeof data.outputLatency === 'number') {
-			updateObj.outputLatency = data.outputLatency;
+		if (typeof data?.peerServerId === 'string') {
+			updateObj.peerServerId = data.peerServerId;
 		}
-		if (typeof data.latencyAdjustment === 'number') {
-			updateObj.latencyAdjustment = data.latencyAdjustment;
-		}
+
 		await updateDoc(docRef, updateObj);
 		console.log(`dbUpdatePeer: doc id ${id} updated`);
 		return await getDoc(docRef);
@@ -688,23 +717,6 @@ export const dbGetPeerSession = async (id) => {
 		}
 	} catch (err) {
 		console.error(`dbGetPeerSession ERROR: ${err}`);
-	}
-};
-export const dbCreatePeerSession = async () => {
-	try {
-		const collectionName = 'peerSessions';
-		const user = firebaseCurrentUser(true);
-		const ts = serverTimestamp();
-		const docSnap = await addDoc(collection(db, collectionName), {
-			createdAt: ts,
-			createdBy: user.uid,
-			updatedAt: ts,
-			//detail: undefined
-		});
-		console.log(`dbCreatePeerSession: New ${collectionName} doc created with id: ${docSnap.id}`);
-		return docSnap;
-	} catch (err) {
-		console.error(`dbCreatePeerSession ERROR: ${err}`);
 	}
 };
 // TODO: this query may change to be more like
@@ -735,6 +747,39 @@ export const dbGetMyPeerSessions = async (limitNum = 100, offset = 0) => {
 		return results;
 	} catch (err) {
 		console.error(`dbGetMyPeerSessions ERROR: ${err}`);
+	}
+};
+export const dbCreatePeerSession = async () => {
+	try {
+		const collectionName = 'peerSessions';
+		const user = firebaseCurrentUser(true);
+		const ts = serverTimestamp();
+		const docSnap = await addDoc(collection(db, collectionName), {
+			createdAt: ts,
+			createdBy: user.uid,
+			updatedAt: ts,
+			//detail: undefined
+		});
+		console.log(`dbCreatePeerSession: New ${collectionName} doc created with id: ${docSnap.id}`);
+		return docSnap;
+	} catch (err) {
+		console.error(`dbCreatePeerSession ERROR: ${err}`);
+	}
+};
+export const dbUpdatePeerSession = async (id, data) => {
+	// data may have any of: .name, others?
+	try {
+		const collectionName = 'peerSessions';
+		const docRef = doc(db, collectionName, id);
+		const updateObj = { updatedAt: serverTimestamp() };
+		if (typeof data?.name === 'string') {
+			updateObj.name = data.name;
+		}
+		await updateDoc(docRef, updateObj);
+		console.log(`dbUpdatePeerSession: doc id ${id} updated`);
+		return await getDoc(docRef);
+	} catch (err) {
+		console.error(`dbUpdatePeerSession ERROR: ${err}`);
 	}
 };
 

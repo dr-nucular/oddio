@@ -56,6 +56,18 @@ export const lsSetPeerSessionId = (id) => {
 	}
 };
 
+export const lsGetPeerId = () => {
+	return window.localStorage.getItem('peerId');
+};
+export const lsSetPeerId = (id) => {
+	if (id) {
+		window.localStorage.setItem('peerId', id);
+	} else {
+		window.localStorage.removeItem('peerId');
+	}
+};
+
+
 export const getUrlParams = () => {
 	const urlParams = {};
 	let match;

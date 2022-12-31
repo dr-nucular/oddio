@@ -1,9 +1,10 @@
 <script>
 import QRCode from 'qrcode'; // https://www.npmjs.com/package/qrcode
 import { onMount, onDestroy } from 'svelte';
-import { dbGetPeerSession } from '../firebase.js';
-import { sAuthInfo, sModules, sPeerSession } from '../stores.js';
-import { lsGetPeerSessionId } from './utils';
+import { dbGetPeerSession, dbGetPeer, dbGetMyPeers, dbCreatePeer, dbUpdatePeer } from '../firebase.js';
+import { sAuthInfo, sModules, sPeerSession, sPeer, sMyPeers } from '../stores.js';
+import { lsGetPeerSessionId, lsGetPeerId, lsSetPeerId } from './utils';
+
 import PeerManager from './PeerManager.js';
 let Peer;
 if (typeof navigator !== "undefined") {
@@ -16,8 +17,11 @@ if (typeof navigator !== "undefined") {
 let authInfo = {};
 let modules = {};
 let peerSession;
+let peer;
+let myPeers;
 
 // other states
+const MAX_AGE_HOURS = 48;
 let peerSessionId;
 const hostPeerId = 'yay';
 let pMan;
@@ -37,13 +41,21 @@ const unsubPeerSession = sPeerSession.subscribe(obj => {
 	if (qrCanvas) qrCanvas.style.display = 'none';
 	peerSession = obj;
 });
+const unsubPeer = sPeer.subscribe(obj => peer = obj);
+const unsubMyPeers = sMyPeers.subscribe(obj => myPeers = obj);
 
 // onMount/onDestroy
 onMount(async () => {
 	console.log(`Peers ON MOUNT`);
-	if (authInfo.isLoggedIn && !peerSession) {
+	if (authInfo.isLoggedIn) {
 		if (!peerSession) {
 			await initPeerSession();
+		}
+		if (!peer) {
+			await initPeer();
+		}
+		if (!myPeers.length) {
+			await initMyPeers();
 		}
 	}
 	pMan = new PeerManager();
@@ -52,6 +64,8 @@ onDestroy(() => {
 	unsubAuthInfo();
 	unsubModules();
 	unsubPeerSession();
+	unsubPeer();
+	unsubMyPeers();
 });
 
 
@@ -71,6 +85,109 @@ const initPeerSession = async () => {
 		console.error(`initPeerSession() ERROR:`, err);
 	}
 };
+
+const initPeer = async () => {
+	try {
+		// look in localstorage for a prior peerId saved there...
+		const id = lsGetPeerId();
+		if (id) {
+			// if there, load it from db and save to store
+			const ps = await dbGetPeer(id);
+			const psUnpacked = { id: ps.id, data: ps.data() };
+			const tooOld = false;//(Date.now() - psUnpacked.data.updatedAt.toDate().valueOf()) / (1000 * 60 * 60) > MAX_AGE_HOURS;
+			!tooOld && sPeer.set(psUnpacked);
+		}
+	} catch (err) {
+		console.error(`initPeer() ERROR:`, err);
+	}
+};
+
+const initMyPeers = async () => {
+	try {
+		const pArray = await dbGetMyPeers();
+		const pArrayFiltered = pArray.map(pd => {
+			return { id: pd.id, data: pd.data() };
+		}).filter(p => {
+			const sameAsActive = p.id === peer?.id;
+			const tooOld = (Date.now() - p.data.updatedAt.toDate().valueOf()) / (1000 * 60 * 60) > MAX_AGE_HOURS;
+			return !sameAsActive && !tooOld;
+		});
+		sMyPeers.set(pArrayFiltered);
+	} catch (err) {
+		console.error(`initMyPeers() ERROR:`, err);
+	}
+};
+
+
+const activatePeer = async (id) => {
+	try {
+		lsSetPeerId(id);
+
+		// if there, load it from db and save to store
+		let dataToStore;
+		if (id) {
+			const p = await dbUpdatePeer(id);
+			const pUnpacked = { id: p.id, data: p.data() };
+			if (pUnpacked) {
+				dataToStore = pUnpacked;
+			}
+		}
+		sPeer.set(dataToStore);
+		initMyPeers();
+	} catch (err) {
+		console.error(`activatePeer() ERROR:`, err);
+	}
+};
+
+
+/**
+ * Create the Peer db entry in its simplest form
+ */
+const createPeer = async () => {
+	await dbCreatePeer();
+	initMyPeers();
+};
+
+/**
+ * Set crucial data on the Peer entry -- activate Peer?
+ * @param opts
+ */
+const updatePeer = async (opts) => {
+	if (!peerSession?.id) {
+		console.error(`updatePeer() ERROR: can't update Peer db entry w/out an active peerSession`);
+		return;
+	}
+	const data = {
+		peerSession: `peerSessions/${peerSession.id}`,
+		peerType: opts.peerType,
+		peerServerId: opts.peerServerId
+	};
+	const p = await dbUpdatePeer(peer.id, data);
+	const pUnpacked = { id: p.id, data: p.data() };
+	const tooOld = false;//(Date.now() - psUnpacked.data.updatedAt.toDate().valueOf()) / (1000 * 60 * 60) > MAX_AGE_HOURS;
+	!tooOld && sPeer.set(pUnpacked);
+
+	initMyPeers(); // ???
+};
+
+/**
+ * Update peer session with a fresh updatedAt timestamp, that is all
+ */
+const updatePeerSession = async () => {
+	if (!peerSession?.id) {
+		console.error(`updatePeerSession() ERROR: you haven't set an active peerSession`);
+		return;
+	}
+	await dbUpdatePeerSession();
+
+};
+
+
+
+
+
+
+
 
 const pmInit = async (myType) => {
 	pMan.config({
@@ -110,6 +227,9 @@ const generateQR = async (psid) => {
 </script>
 
 
+
+
+
 <div
 	style={cssVarStyles}
 	class="content-module">
@@ -132,6 +252,48 @@ const generateQR = async (psid) => {
 			<li>Create a new peer session that you can share</li>
 		</ul>
 	{/if}
+
+	<hr/>
+
+	{#if peer}
+		Active Peer:
+		<ul>
+			<li>id: {peer.id}</li>
+			<li>createdBy: {peer.data.createdBy}</li>
+			<li>last updated: {(Date.now() - peer.data.updatedAt.toDate().valueOf()) / (1000 * 60 * 60)} hours ago</li>
+			<li>Peer Session: ?</li>
+			<li><button on:click={() => activatePeer(undefined)}>Deactivate</button></li>
+		</ul>
+	{:else}
+		You don't have an active Peer at the moment.
+		<ul>
+			<li><button on:click={createPeer}>Create a new peer</button></li>
+		</ul>
+	{/if}
+
+	{#if myPeers?.length}
+		Your inactive Peers:
+		<ol>
+		{#each myPeers as p}
+			<li>
+				id: {p.id}
+				<ul>
+					<li>updatedAt: {p.data.updatedAt.toDate().toUTCString()}</li>
+					<li>last updated: {(Date.now() - p.data.updatedAt.toDate().valueOf()) / (1000 * 60 * 60)} hours ago</li>
+					<li>Peer Session: ?</li>
+					<li><button on:click={() => activatePeer(p.id)}>Activate</button></li>
+				</ul>
+			</li>
+		{/each}
+		</ol>
+	{/if}
+
+
+
+	<hr/>
+
+
+
 
 	Join as a
 	<button on:click={() => pmInit('host')}>Game Host (computer/tablet)</button>

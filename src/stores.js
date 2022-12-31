@@ -67,3 +67,5 @@ export let sSyncSettings = writable({
 
 export let sPeerSession = writable(null);
 export let sMyPeerSessions = writable([]);
+export let sPeer = writable(null);
+export let sMyPeers = writable([]);

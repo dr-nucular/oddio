@@ -1,7 +1,7 @@
 <script>
 import QRCode from 'qrcode'; // https://www.npmjs.com/package/qrcode
 import { onMount, onDestroy } from 'svelte';
-import { dbCreatePeerSession, dbGetPeerSession, dbGetMyPeerSessions } from '../firebase.js';
+import { dbGetPeerSession, dbGetMyPeerSessions, dbCreatePeerSession, dbUpdatePeerSession } from '../firebase.js';
 import { sAuthInfo, sModules, sProject, sSyncSettings, sPeerSession, sMyPeerSessions } from '../stores.js';
 import { lsGetPeerSessionId, lsSetPeerSessionId } from './utils';
 
@@ -34,7 +34,7 @@ const unsubMyPeerSessions = sMyPeerSessions.subscribe(obj => myPeerSessions = ob
 
 onMount(async () => {
 	console.log(`PeerSession ON MOUNT`);
-	if (authInfo.isLoggedIn && !peerSession) {
+	if (authInfo.isLoggedIn) {
 		if (!peerSession) {
 			await initPeerSession();
 		}
@@ -87,33 +87,38 @@ const initMyPeerSessions = async () => {
 	}
 };
 
-const setPeerSession = async (id) => {
+
+
+
+const activatePeerSession = async (id) => {
 	try {
 		lsSetPeerSessionId(id);
 
 		// if there, load it from db and save to store
 		let dataToStore;
 		if (id) {
-			const ps = await dbGetPeerSession(id); // TODO: catch a stale sesh
+			const ps = await dbUpdatePeerSession(id);
 			const psUnpacked = { id: ps.id, data: ps.data() };
-			const tooOld = (Date.now() - psUnpacked.data.updatedAt.toDate().valueOf()) / (1000 * 60 * 60) > MAX_AGE_HOURS;
-			if (psUnpacked && !tooOld) {
+			if (psUnpacked) {
 				dataToStore = psUnpacked;
 			}
 		}
 		sPeerSession.set(dataToStore);
 		initMyPeerSessions();
 	} catch (err) {
-		console.error(`setPeerSession() ERROR:`, err);
+		console.error(`activatePeerSession() ERROR:`, err);
 	}
 };
 
 const createPeerSession = async () => {
-	// TODO
-	console.log(`createPeerSession: not implemented yet.`);
 	const sesh = await dbCreatePeerSession();
 	initMyPeerSessions();
 };
+
+
+
+
+
 
 const generateQR = async (psid) => {
 	try {
@@ -146,7 +151,7 @@ const generateQR = async (psid) => {
 			<li>
 				<button on:click={() => generateQR(peerSession.id)}>Invite others to join</button>
 				or
-				<button on:click={() => setPeerSession(undefined)}>Deactivate</button>
+				<button on:click={() => activatePeerSession(undefined)}>Deactivate</button>
 			</li>
 		</ul>
 		<canvas bind:this={qrCanvas}></canvas>
@@ -168,7 +173,7 @@ const generateQR = async (psid) => {
 					<li>updatedAt: {ps.data.updatedAt.toDate().toUTCString()}</li>
 					<li>last updated: {(Date.now() - ps.data.updatedAt.toDate().valueOf()) / (1000 * 60 * 60)} hours ago</li>
 					<li># peers: ... </li>
-					<li><button on:click={() => setPeerSession(ps.id)}>Activate</button></li>
+					<li><button on:click={() => activatePeerSession(ps.id)}>Activate</button></li>
 				</ul>
 			</li>
 		{/each}
