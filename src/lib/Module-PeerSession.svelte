@@ -16,6 +16,8 @@ let myPeerSessions;
 const MAX_AGE_HOURS = 48;
 let qrCanvas;
 let project;
+let peerSessionName;
+let docSaveButton;
 
 
 
@@ -119,6 +121,40 @@ const createPeerSession = async () => {
 
 
 
+const updatePeerSessionName = async () => {
+	console.log(`updatePeerSessionName() ...`);
+	try {
+		/*
+		console.log(`.... docId: ${docId.value}`);
+		console.log(`.... docName: ${docName.value}`);
+		*/
+		if (!docId?.value) {
+			throw `docId not present`;
+		}
+		if (!docName?.value) {
+			throw `docName must be set`;
+		}
+
+		const name = docName.value.trim();
+
+		docSaveButton.innerText = "Saving...";
+		docSaveButton.disabled = true;
+		//await updateProject(docId.value, { name });
+		//closeDocEditor();
+		//requestProjects();
+
+		// if this edited item is also the active one, then we need to update that data in the store
+		//const updatedProject = await readProject(docId.value);
+		//if (curProject.id === updatedProject.id) {
+		//	sCurProject.set(updatedProject);
+		//}
+	} catch (err) {
+		console.error(`updatePeerSessionName() ERROR: ${err}`);
+	}
+};
+
+
+
 
 const generateQR = async (psid) => {
 	try {
@@ -145,6 +181,16 @@ const generateQR = async (psid) => {
 		Active Peer Session:
 		<ul>
 			<li>id: {peerSession.id}</li>
+
+			<li>
+				<form on:submit|preventDefault={updatePeerSessionName}>
+					<label for="docName">Name:</label>
+					<input id="docName" type="text" bind:value={peerSessionName} /><br/>
+					<button id="docSaveButton" type="submit" bind:this={docSaveButton}>Save</button>
+				</form>
+	
+			</li>
+
 			<li>createdBy: {peerSession.data.createdBy}</li>
 			<li>last updated: {(Date.now() - peerSession.data.updatedAt.toDate().valueOf()) / (1000 * 60 * 60)} hours ago</li>
 			<li># peers: ... </li>
