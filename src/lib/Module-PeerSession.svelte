@@ -2,7 +2,7 @@
 import QRCode from 'qrcode'; // https://www.npmjs.com/package/qrcode
 import { onMount, onDestroy } from 'svelte';
 import { dbGetPeerSession, dbGetMyPeerSessions, dbCreatePeerSession, dbUpdatePeerSession } from '../firebase.js';
-import { sAuthInfo, sModules, sProject, sSyncSettings, sPeerSession, sMyPeerSessions } from '../stores.js';
+import { sAuthInfo, sModules, sSyncSettings, sPeerSession, sMyPeerSessions } from '../stores.js';
 import { lsGetPeerSessionId, lsSetPeerSessionId } from './utils';
 
 // subscription vars
@@ -15,23 +15,37 @@ let myPeerSessions;
 // other states
 const MAX_AGE_HOURS = 48;
 let qrCanvas;
-let project;
 let peerSessionName;
-let docSaveButton;
+let iSaveNameButton;
 
+const processPeerSessionData = (newPs) => {
+	if (!newPs?.data) return;
+	//const newPs = JSON.parse(JSON.stringify(ps));
+	newPs.data.hoursOld = (Date.now() - newPs.data.updatedAt.toDate().valueOf()) / (1000 * 60 * 60);
+	if (newPs.data.hoursOld <= 1) {
+		newPs.data.updatedAtPretty = `<1 hour ago`;
+	} else if (newPs.data.hoursOld <= 2) {
+		newPs.data.updatedAtPretty = `Over an hour ago`;
+	} else {
+		newPs.data.updatedAtPretty = `About ${Math.floor(newPs.data.hoursOld)} hours ago`;
+	}
+	return newPs;
+};
 
 
 // store subscriptions
 const unsubAuthInfo = sAuthInfo.subscribe(obj => authInfo = obj);
 const unsubModules = sModules.subscribe(obj => modules = obj);
 $: cssVarStyles = `--bgColor:${modules.peerSession?.bgColor}`;
-const unsubProject = sProject.subscribe(obj => project = obj);
 const unsubSyncSettings = sSyncSettings.subscribe(obj => syncSettings = obj);
-const unsubPeerSession = sPeerSession.subscribe(obj => {
+const unsubPeerSession = sPeerSession.subscribe(ps => {
 	if (qrCanvas) qrCanvas.style.display = 'none';
-	peerSession = obj;
+	peerSession = processPeerSessionData(ps);
+	peerSessionName = peerSession?.data?.name;
 });
-const unsubMyPeerSessions = sMyPeerSessions.subscribe(obj => myPeerSessions = obj);
+const unsubMyPeerSessions = sMyPeerSessions.subscribe(arr => {
+	myPeerSessions = arr.map(ps => processPeerSessionData(ps));
+});
 
 
 onMount(async () => {
@@ -48,7 +62,6 @@ onMount(async () => {
 onDestroy(() => {
 	unsubAuthInfo();
 	unsubModules();
-	unsubProject();
 	unsubSyncSettings();
 	unsubPeerSession();
 	unsubMyPeerSessions();
@@ -101,9 +114,7 @@ const activatePeerSession = async (id) => {
 		if (id) {
 			const ps = await dbUpdatePeerSession(id);
 			const psUnpacked = { id: ps.id, data: ps.data() };
-			if (psUnpacked) {
-				dataToStore = psUnpacked;
-			}
+			dataToStore = psUnpacked;
 		}
 		sPeerSession.set(dataToStore);
 		initMyPeerSessions();
@@ -124,30 +135,25 @@ const createPeerSession = async () => {
 const updatePeerSessionName = async () => {
 	console.log(`updatePeerSessionName() ...`);
 	try {
-		/*
-		console.log(`.... docId: ${docId.value}`);
-		console.log(`.... docName: ${docName.value}`);
-		*/
-		if (!docId?.value) {
-			throw `docId not present`;
+		console.log(`.... peerSessionName: ${peerSessionName}`);
+		if (!peerSession?.id) {
+			throw `peerSession.id must be set`;
 		}
-		if (!docName?.value) {
-			throw `docName must be set`;
+		if (!peerSessionName) {
+			throw `peerSessionName must be set`;
 		}
-
-		const name = docName.value.trim();
-
-		docSaveButton.innerText = "Saving...";
-		docSaveButton.disabled = true;
-		//await updateProject(docId.value, { name });
-		//closeDocEditor();
-		//requestProjects();
-
-		// if this edited item is also the active one, then we need to update that data in the store
-		//const updatedProject = await readProject(docId.value);
-		//if (curProject.id === updatedProject.id) {
-		//	sCurProject.set(updatedProject);
-		//}
+		const name = peerSessionName.trim();
+		if (name === peerSession.data.name) {
+			throw `peerSessionName is the same as what's in the db, aborting.`;
+		}
+		iSaveNameButton.innerText = "Saving...";
+		iSaveNameButton.disabled = true;
+		const ps = await dbUpdatePeerSession(peerSession.id, { name });
+		const psUnpacked = { id: ps.id, data: ps.data() };
+		sPeerSession.set(psUnpacked);
+		initMyPeerSessions();
+		iSaveNameButton.innerText = "Save";
+		iSaveNameButton.disabled = false;
 	} catch (err) {
 		console.error(`updatePeerSessionName() ERROR: ${err}`);
 	}
@@ -169,6 +175,8 @@ const generateQR = async (psid) => {
 	}
 };
 
+
+
 </script>
 
 
@@ -180,19 +188,19 @@ const generateQR = async (psid) => {
 	{#if peerSession}
 		Active Peer Session:
 		<ul>
-			<li>id: {peerSession.id}</li>
-
+			{#if peerSession.data.createdBy === authInfo.uid}
 			<li>
 				<form on:submit|preventDefault={updatePeerSessionName}>
-					<label for="docName">Name:</label>
-					<input id="docName" type="text" bind:value={peerSessionName} /><br/>
-					<button id="docSaveButton" type="submit" bind:this={docSaveButton}>Save</button>
+					Name: <input id="iPeerSessionName" type="text" bind:value={peerSessionName} />
+					<button id="iSaveNameButton" type="submit" bind:this={iSaveNameButton}>Save</button>
 				</form>
-	
 			</li>
+			{:else}
+			<li>Name: {peerSessionName}</li>
+			{/if}
 
-			<li>createdBy: {peerSession.data.createdBy}</li>
-			<li>last updated: {(Date.now() - peerSession.data.updatedAt.toDate().valueOf()) / (1000 * 60 * 60)} hours ago</li>
+			<li>id: {peerSession.id}</li>
+			<li>last updated: {peerSession.data.updatedAtPretty}</li>
 			<li># peers: ... </li>
 			<li>
 				<button on:click={() => generateQR(peerSession.id)}>Invite others to join</button>
@@ -214,10 +222,14 @@ const generateQR = async (psid) => {
 		<ol>
 		{#each myPeerSessions as ps}
 			<li>
-				id: {ps.id}
+				{#if ps.data.name}
+					{ps.data.name}
+				{:else}
+					No name set (id: {ps.id})
+				{/if}
 				<ul>
-					<li>updatedAt: {ps.data.updatedAt.toDate().toUTCString()}</li>
 					<li>last updated: {(Date.now() - ps.data.updatedAt.toDate().valueOf()) / (1000 * 60 * 60)} hours ago</li>
+					<li>last updated: {ps.data.updatedAtPretty}</li>
 					<li># peers: ... </li>
 					<li><button on:click={() => activatePeerSession(ps.id)}>Activate</button></li>
 				</ul>
@@ -247,4 +259,6 @@ const generateQR = async (psid) => {
 		display: none;
 		margin: 0 auto 20px;
 	}
+
+
 </style>

@@ -65,7 +65,7 @@ export let sSyncSettings = writable({
 	lastUpdated: 0
 });
 
-export let sPeerSession = writable(null);
+export let sPeerSession = writable(); // inits value of undefined?
 export let sMyPeerSessions = writable([]);
 export let sPeer = writable(null);
 export let sMyPeers = writable([]);
