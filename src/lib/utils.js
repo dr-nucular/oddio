@@ -67,6 +67,39 @@ export const lsSetPeerId = (id) => {
 	}
 };
 
+export const processUpdatedAtData = (ps) => {
+	if (!ps?.data) return;
+	//const newPs = JSON.parse(JSON.stringify(ps));
+	ps.data.updatedAtPretty = agePrettified(Date.now() - ps.data.updatedAt.toDate().valueOf());
+	return ps;
+};
+
+export const agePrettified = (ms) => {
+	if (ms > 31536000000) {
+		const years = (ms / 31536000000).toFixed(1);
+		return `${years} years ago`;
+	} else if (ms > 2592000000) {
+		const months = (ms / 2592000000).toFixed(1);
+		return `${months} months ago`;
+	} else if (ms > 604800000) {
+		const weeks = (ms / 604800000).toFixed(1);
+		return `${weeks} weeks ago`;
+	} else if (ms > 86400000) {
+		const days = (ms / 86400000).toFixed(1);
+		return `${days} days ago`;
+	} else if (ms > 3600000) {
+		const hours = (ms / 3600000).toFixed(1);
+		return `${hours} hours ago`;
+	} else if (ms > 60000) {
+		const mins = (ms / 60000).toFixed(1);
+		return `${mins} mins ago`;
+	} else if (ms > 1000) {
+		const secs = (ms / 1000).toFixed(1);
+		return `${secs} secs ago`;
+	} else {
+		return `just now`;
+	}
+};
 
 export const getUrlParams = () => {
 	const urlParams = {};

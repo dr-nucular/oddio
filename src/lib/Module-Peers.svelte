@@ -3,7 +3,7 @@ import QRCode from 'qrcode'; // https://www.npmjs.com/package/qrcode
 import { onMount, onDestroy } from 'svelte';
 import { dbGetPeerSession, dbGetPeer, dbGetMyPeers, dbCreatePeer, dbUpdatePeer } from '../firebase.js';
 import { sAuthInfo, sModules, sPeerSession, sPeer, sMyPeers } from '../stores.js';
-import { lsGetPeerSessionId, lsGetPeerId, lsSetPeerId } from './utils';
+import { lsGetPeerSessionId, lsGetPeerId, lsSetPeerId, processUpdatedAtData } from './utils';
 
 import PeerManager from './PeerManager.js';
 let Peer;
@@ -26,7 +26,10 @@ let peerSessionId;
 const hostPeerId = 'yay';
 let pMan;
 let peerConns = []; // array of PeerConnections
+
 let qrCanvas;
+let peerName;
+let iSaveNameButton;
 
 let domLogs = [];
 let domLogData = '';
@@ -37,12 +40,17 @@ let domLogData = '';
 const unsubAuthInfo = sAuthInfo.subscribe(obj => authInfo = obj);
 const unsubModules = sModules.subscribe(obj => modules = obj);
 $: cssVarStyles = `--bgColor:${modules.peers?.bgColor}`;
-const unsubPeerSession = sPeerSession.subscribe(obj => {
+const unsubPeerSession = sPeerSession.subscribe(ps => {
 	if (qrCanvas) qrCanvas.style.display = 'none';
-	peerSession = obj;
+	peerSession = processUpdatedAtData(ps);
 });
-const unsubPeer = sPeer.subscribe(obj => peer = obj);
-const unsubMyPeers = sMyPeers.subscribe(obj => myPeers = obj);
+const unsubPeer = sPeer.subscribe(p => {
+	peer = processUpdatedAtData(p);
+	peerName = peer?.data?.name;
+});
+const unsubMyPeers = sMyPeers.subscribe(arr => {
+	myPeers = arr.map(p => processUpdatedAtData(p));
+});
 
 // onMount/onDestroy
 onMount(async () => {
@@ -211,6 +219,35 @@ const pmInit = async (myType) => {
 	await pMan.init(myType);
 };
 
+
+
+const updatePeerName = async () => {
+	console.log(`updatePeerName() ...`);
+	try {
+		console.log(`.... peerName: ${peerName}`);
+		if (!peer?.id) {
+			throw `peer.id must be set`;
+		}
+		if (!peerName) {
+			throw `peerName must be set`;
+		}
+		const name = peerName.trim();
+		if (name === peer.data.name) {
+			throw `peerName is the same as what's in the db, aborting.`;
+		}
+		iSaveNameButton.innerText = "Saving...";
+		iSaveNameButton.disabled = true;
+		const ps = await dbUpdatePeer(peer.id, { name });
+		const psUnpacked = { id: ps.id, data: ps.data() };
+		sPeer.set(psUnpacked);
+		initMyPeers();
+		iSaveNameButton.innerText = "Save";
+		iSaveNameButton.disabled = false;
+	} catch (err) {
+		console.error(`updatePeerName() ERROR: ${err}`);
+	}
+};
+
 const generateQR = async (psid) => {
 	try {
 		//const url = `${window.location.href}/?psid=${psid}`;
@@ -238,9 +275,9 @@ const generateQR = async (psid) => {
 	{#if peerSession}
 		Active Peer Session:
 		<ul>
+			<li>Name: {peerSession.data.name}</li>
 			<li>id: {peerSession.id}</li>
-			<li>createdBy: {peerSession.data.createdBy}</li>
-			<li>last updated: {(Date.now() - peerSession.data.updatedAt.toDate().valueOf()) / (1000 * 60 * 60)} hours ago</li>
+			<li>last updated: {peerSession.data.updatedAtPretty}</li>
 			<li># peers: ... </li>
 			<li><button on:click={() => generateQR(peerSession.id)}>Invite others to join</button></li>
 		</ul>
@@ -258,9 +295,14 @@ const generateQR = async (psid) => {
 	{#if peer}
 		Active Peer:
 		<ul>
+			<li>
+				<form on:submit|preventDefault={updatePeerName}>
+					Name: <input id="iPeerName" type="text" bind:value={peerName} />
+					<button id="iSaveNameButton" type="submit" bind:this={iSaveNameButton}>Save</button>
+				</form>
+			</li>
 			<li>id: {peer.id}</li>
-			<li>createdBy: {peer.data.createdBy}</li>
-			<li>last updated: {(Date.now() - peer.data.updatedAt.toDate().valueOf()) / (1000 * 60 * 60)} hours ago</li>
+			<li>last updated: {peer.data.updatedAtPretty}</li>
 			<li>Peer Session: ?</li>
 			<li><button on:click={() => activatePeer(undefined)}>Deactivate</button></li>
 		</ul>
@@ -276,10 +318,13 @@ const generateQR = async (psid) => {
 		<ol>
 		{#each myPeers as p}
 			<li>
-				id: {p.id}
+				{#if p.data.name}
+					{p.data.name}
+				{:else}
+					No name set (id: {p.id})
+				{/if}
 				<ul>
-					<li>updatedAt: {p.data.updatedAt.toDate().toUTCString()}</li>
-					<li>last updated: {(Date.now() - p.data.updatedAt.toDate().valueOf()) / (1000 * 60 * 60)} hours ago</li>
+					<li>last updated: {p.data.updatedAtPretty}</li>
 					<li>Peer Session: ?</li>
 					<li><button on:click={() => activatePeer(p.id)}>Activate</button></li>
 				</ul>

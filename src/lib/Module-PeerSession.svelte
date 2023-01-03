@@ -3,7 +3,7 @@ import QRCode from 'qrcode'; // https://www.npmjs.com/package/qrcode
 import { onMount, onDestroy } from 'svelte';
 import { dbGetPeerSession, dbGetMyPeerSessions, dbCreatePeerSession, dbUpdatePeerSession } from '../firebase.js';
 import { sAuthInfo, sModules, sSyncSettings, sPeerSession, sMyPeerSessions } from '../stores.js';
-import { lsGetPeerSessionId, lsSetPeerSessionId } from './utils';
+import { lsGetPeerSessionId, lsSetPeerSessionId, processUpdatedAtData } from './utils';
 
 // subscription vars
 let authInfo = {};
@@ -18,20 +18,6 @@ let qrCanvas;
 let peerSessionName;
 let iSaveNameButton;
 
-const processPeerSessionData = (newPs) => {
-	if (!newPs?.data) return;
-	//const newPs = JSON.parse(JSON.stringify(ps));
-	newPs.data.hoursOld = (Date.now() - newPs.data.updatedAt.toDate().valueOf()) / (1000 * 60 * 60);
-	if (newPs.data.hoursOld <= 1) {
-		newPs.data.updatedAtPretty = `<1 hour ago`;
-	} else if (newPs.data.hoursOld <= 2) {
-		newPs.data.updatedAtPretty = `Over an hour ago`;
-	} else {
-		newPs.data.updatedAtPretty = `About ${Math.floor(newPs.data.hoursOld)} hours ago`;
-	}
-	return newPs;
-};
-
 
 // store subscriptions
 const unsubAuthInfo = sAuthInfo.subscribe(obj => authInfo = obj);
@@ -40,11 +26,11 @@ $: cssVarStyles = `--bgColor:${modules.peerSession?.bgColor}`;
 const unsubSyncSettings = sSyncSettings.subscribe(obj => syncSettings = obj);
 const unsubPeerSession = sPeerSession.subscribe(ps => {
 	if (qrCanvas) qrCanvas.style.display = 'none';
-	peerSession = processPeerSessionData(ps);
+	peerSession = processUpdatedAtData(ps);
 	peerSessionName = peerSession?.data?.name;
 });
 const unsubMyPeerSessions = sMyPeerSessions.subscribe(arr => {
-	myPeerSessions = arr.map(ps => processPeerSessionData(ps));
+	myPeerSessions = arr.map(ps => processUpdatedAtData(ps));
 });
 
 
@@ -228,7 +214,6 @@ const generateQR = async (psid) => {
 					No name set (id: {ps.id})
 				{/if}
 				<ul>
-					<li>last updated: {(Date.now() - ps.data.updatedAt.toDate().valueOf()) / (1000 * 60 * 60)} hours ago</li>
 					<li>last updated: {ps.data.updatedAtPretty}</li>
 					<li># peers: ... </li>
 					<li><button on:click={() => activatePeerSession(ps.id)}>Activate</button></li>
@@ -238,7 +223,7 @@ const generateQR = async (psid) => {
 		</ol>
 	{/if}
 
-
+	Other previous Peer Sessions...
 	
 
 

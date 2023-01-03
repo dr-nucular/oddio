@@ -675,7 +675,7 @@ export const dbCreatePeer = async (data) => {
 	}
 };
 export const dbUpdatePeer = async (id, data) => {
-	// data (optional object) may have any of: .peerSession, .peerType, .peerServerId
+	// data (optional object) may have any of: .name, .peerSession, .peerType, .peerServerId
 	try {
 		const collectionName = 'peers';
 		const docRef = doc(db, collectionName, id);
@@ -691,6 +691,9 @@ export const dbUpdatePeer = async (id, data) => {
 		}
 		if (typeof data?.peerServerId === 'string') {
 			updateObj.peerServerId = data.peerServerId;
+		}
+		if (typeof data?.name === 'string') {
+			updateObj.name = data.name;
 		}
 
 		await updateDoc(docRef, updateObj);
