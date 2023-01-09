@@ -1,6 +1,18 @@
 BEAT BATTLE dev plan
 --------------------
 
+Jan 9, 2023
+--------------------------
+MAYBE i just need to find concrete product to make that uses the fewest core components including:
+- peer to peer comm
+- multiplayer sync
+- phaser/graphics
+- 4-track playback with layer toggle
+- section based playback
+- spatializing
+
+
+
 -------------
 12.20.2022
 
