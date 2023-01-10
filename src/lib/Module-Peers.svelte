@@ -21,7 +21,7 @@ let peer;
 let myPeers;
 
 // other states
-const MAX_AGE_HOURS = 48;
+const MAX_AGE_HOURS = 2000;
 let peerSessionId;
 const hostPeerId = 'yay';
 let pMan;
@@ -126,7 +126,7 @@ const initMyPeers = async () => {
 	}
 };
 
-
+// rename initPeer?
 const activatePeer = async (id) => {
 	try {
 		lsSetPeerId(id);
@@ -134,7 +134,9 @@ const activatePeer = async (id) => {
 		// if there, load it from db and save to store
 		let dataToStore;
 		if (id) {
-			const p = await dbUpdatePeer(id);
+			const p = await dbUpdatePeer(id, {
+
+			});
 			const pUnpacked = { id: p.id, data: p.data() };
 			if (pUnpacked) {
 				dataToStore = pUnpacked;
@@ -166,14 +168,13 @@ const updatePeer = async (opts) => {
 		return;
 	}
 	const data = {
-		peerSession: `peerSessions/${peerSession.id}`,
+		peerSession: opts.peerSession,
 		peerType: opts.peerType,
 		peerServerId: opts.peerServerId
 	};
 	const p = await dbUpdatePeer(peer.id, data);
 	const pUnpacked = { id: p.id, data: p.data() };
-	const tooOld = false;//(Date.now() - psUnpacked.data.updatedAt.toDate().valueOf()) / (1000 * 60 * 60) > MAX_AGE_HOURS;
-	!tooOld && sPeer.set(pUnpacked);
+	sPeer.set(pUnpacked);
 
 	initMyPeers(); // ???
 };
@@ -261,6 +262,24 @@ const generateQR = async (psid) => {
 	}
 };
 
+const addPeerToPeerSession = async () => {
+	try {
+		if (!peerSession?.id) {
+			throw `peerSession.id must be set`;
+		}
+		if (!peer?.id) {
+			throw `peer.id must be set`;
+		}
+		//console.log(`addPeerToPeerSession peer.id:`, peer.id);
+		await updatePeer({
+			peerSession: `peerSessions/${peerSession.id}`
+		});
+		// TODO: update sPeerSessionsAndTheirPeers
+	} catch (err) {
+		console.error(`addPeerToPeerSession() ERR:`, err);
+	}
+};
+
 </script>
 
 
@@ -283,9 +302,10 @@ const generateQR = async (psid) => {
 		</ul>
 		<canvas bind:this={qrCanvas}></canvas>
 	{:else}
-		You don't have an active Peer Session at the moment.
+		You don't have an active Peer Session at the moment.  You can:
 		<ul>
 			<li>Join a friend's peer session from a link or QRcode</li>
+			<li>Re-activate one of your prior peer sessions from the past</li>
 			<li>Create a new peer session that you can share</li>
 		</ul>
 	{/if}
@@ -303,7 +323,12 @@ const generateQR = async (psid) => {
 			</li>
 			<li>id: {peer.id}</li>
 			<li>last updated: {peer.data.updatedAtPretty}</li>
-			<li>Peer Session: ?</li>
+			<li>Peer connection to Peer Session: ???
+				<ul>
+					<li><button on:click={() => addPeerToPeerSession()}>Connect to active Peer Session</button></li>
+				</ul>
+			</li>
+
 			<li><button on:click={() => activatePeer(undefined)}>Deactivate</button></li>
 		</ul>
 	{:else}

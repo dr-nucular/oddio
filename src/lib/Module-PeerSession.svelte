@@ -1,8 +1,8 @@
 <script>
 import QRCode from 'qrcode'; // https://www.npmjs.com/package/qrcode
 import { onMount, onDestroy } from 'svelte';
-import { dbGetPeerSession, dbGetMyPeerSessions, dbCreatePeerSession, dbUpdatePeerSession } from '../firebase.js';
-import { sAuthInfo, sModules, sSyncSettings, sPeerSession, sMyPeerSessions } from '../stores.js';
+import { dbGetPeerSession, dbGetMyPeerSessions, dbCreatePeerSession, dbUpdatePeerSession, dbQueryPeerSessionPeers } from '../firebase.js';
+import { sAuthInfo, sModules, sSyncSettings, sPeerSession, sMyPeerSessions, sPeerSessionsAndTheirPeers } from '../stores.js';
 import { lsGetPeerSessionId, lsSetPeerSessionId, processUpdatedAtData } from './utils';
 
 // subscription vars
@@ -11,9 +11,10 @@ let modules = {};
 let syncSettings = {};
 let peerSession;
 let myPeerSessions;
+let peerSessionsAndTheirPeers;
 
 // other states
-const MAX_AGE_HOURS = 48;
+const MAX_AGE_HOURS = 200;
 let qrCanvas;
 let peerSessionName;
 let iSaveNameButton;
@@ -32,7 +33,7 @@ const unsubPeerSession = sPeerSession.subscribe(ps => {
 const unsubMyPeerSessions = sMyPeerSessions.subscribe(arr => {
 	myPeerSessions = arr.map(ps => processUpdatedAtData(ps));
 });
-
+const unsubPeerSessionsAndTheirPeers = sPeerSessionsAndTheirPeers.subscribe(obj => peerSessionsAndTheirPeers = obj);
 
 onMount(async () => {
 	console.log(`PeerSession ON MOUNT`);
@@ -51,6 +52,7 @@ onDestroy(() => {
 	unsubSyncSettings();
 	unsubPeerSession();
 	unsubMyPeerSessions();
+	unsubPeerSessionsAndTheirPeers();
 });
 
 
@@ -65,7 +67,21 @@ const initPeerSession = async () => {
 			const ps = await dbGetPeerSession(id);
 			const psUnpacked = { id: ps.id, data: ps.data() };
 			const tooOld = (Date.now() - psUnpacked.data.updatedAt.toDate().valueOf()) / (1000 * 60 * 60) > MAX_AGE_HOURS;
-			!tooOld && sPeerSession.set(psUnpacked);
+			if (!tooOld) {
+				sPeerSession.set(psUnpacked);
+
+				// add to peerSessionsAndTheirPeers
+				const pspArray = await dbQueryPeerSessionPeers(id);
+				console.log(`*** pspArray length:`, pspArray.length);
+				const pspArrayUnpacked = pspArray.map(psp => {
+					return { id: psp.id, data: psp.data() };
+				});
+				console.log(`*** pspArrayUnpacked:`, pspArrayUnpacked);
+				sPeerSessionsAndTheirPeers.update(obj => {
+					obj[id] = pspArrayUnpacked;
+					return obj;
+				});
+			}
 		}
 	} catch (err) {
 		console.error(`initPeerSession() ERROR:`, err);
@@ -83,6 +99,21 @@ const initMyPeerSessions = async () => {
 			return !sameAsActive && !tooOld;
 		});
 		sMyPeerSessions.set(psArrayFiltered);
+
+		// add each to peerSessionsAndTheirPeers
+		psArrayFiltered.forEach(async (ps) => {
+			const pspArray = await dbQueryPeerSessionPeers(ps.id);
+			const pspArrayUnpacked = pspArray.map(psp => {
+				return { id: psp.id, data: psp.data() };
+			});
+			console.log(`*** pspArrayUnpacked:`, pspArrayUnpacked);
+			sPeerSessionsAndTheirPeers.update(obj => {
+				obj[ps.id] = pspArrayUnpacked;
+				return obj;
+			});
+		});
+
+
 	} catch (err) {
 		console.error(`initMyPeerSessions() ERROR:`, err);
 	}
@@ -187,7 +218,15 @@ const generateQR = async (psid) => {
 
 			<li>id: {peerSession.id}</li>
 			<li>last updated: {peerSession.data.updatedAtPretty}</li>
-			<li># peers: ... </li>
+			<li>
+				# peers:
+				{#if peerSessionsAndTheirPeers[peerSession.id]?.length}
+					{peerSessionsAndTheirPeers[peerSession.id].length}:
+					{peerSessionsAndTheirPeers[peerSession.id].map(psp => psp.data.name || psp.id).join(', ')}
+				{:else}
+					0
+				{/if}
+			</li>
 			<li>
 				<button on:click={() => generateQR(peerSession.id)}>Invite others to join</button>
 				or
@@ -196,9 +235,10 @@ const generateQR = async (psid) => {
 		</ul>
 		<canvas bind:this={qrCanvas}></canvas>
 	{:else}
-		You don't have an active Peer Session at the moment.
+		You don't have an active Peer Session at the moment.  You can:
 		<ul>
 			<li>Join a friend's peer session from a link or QRcode</li>
+			<li>Activate one of your inactive peer session from the past</li>
 			<li><button on:click={createPeerSession}>Create a new peer session</button> that you can share</li>
 		</ul>
 	{/if}
@@ -215,7 +255,15 @@ const generateQR = async (psid) => {
 				{/if}
 				<ul>
 					<li>last updated: {ps.data.updatedAtPretty}</li>
-					<li># peers: ... </li>
+					<li>
+						# peers:
+						{#if peerSessionsAndTheirPeers[ps.id]?.length}
+							{peerSessionsAndTheirPeers[ps.id].length}:
+							{peerSessionsAndTheirPeers[ps.id].map(psp => psp.data.name || psp.id).join(', ')}
+						{:else}
+							0
+						{/if}
+					</li>
 					<li><button on:click={() => activatePeerSession(ps.id)}>Activate</button></li>
 				</ul>
 			</li>

@@ -69,3 +69,4 @@ export let sPeerSession = writable(); // inits value of undefined?
 export let sMyPeerSessions = writable([]);
 export let sPeer = writable();
 export let sMyPeers = writable([]);
+export let sPeerSessionsAndTheirPeers = writable({});

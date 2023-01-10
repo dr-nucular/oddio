@@ -1,7 +1,7 @@
 BEAT BATTLE dev plan
 --------------------
 
-Jan 9, 2023
+1.9.2023
 --------------------------
 MAYBE i just need to find concrete product to make that uses the fewest core components including:
 - peer to peer comm
@@ -12,6 +12,26 @@ MAYBE i just need to find concrete product to make that uses the fewest core com
 - spatializing
 
 
+------------
+1.7.2023
+
+also a game host could share a google tab in a google meet / zoom, and players connect remotely without needing to host
+
+figure out simplest approach for a human (peer) to join a peer session and connect to all peers
+- map out all conditions for peers (db), gameSessions (db), psNodes (peerServer), psConns (peerServer)
+
+rename all the  things
+- game session
+    - has type (type of game), has gameConfig json, etc.
+    - has game state -- src of thuth
+- peer
+    - has link to gameSession
+    - has type: "host", "player", "disruptor", etc.... custom based on game
+        - if host, will read/write from/to gameState 
+    - has link to psNode (PeerServer Node)
+    - can contain or link to other data, like player name or number, avatar, color, score, if important to game
+- peer Manager
+    - client side manager for browser's psNode (peerserver.peer) and psConns (peerserver.conn)
 
 -------------
 12.20.2022

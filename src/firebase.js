@@ -789,7 +789,14 @@ export const dbUpdatePeerSession = async (id, data) => {
 export const dbQueryPeerSessionPeers = async (peerSessionId, limitNum = 100, offset = 0) => {
 	try {
 		//const user = firebaseCurrentUser(true);
-		const q = query(collection(db, 'peers'), where('peerSession', '==', peerSessionId), orderBy('updatedAt', 'desc'), limit(limitNum));
+		const peerSessionDocRef = doc(db, 'peerSessions', peerSessionId);
+		//console.log(`** dbQueryPeerSessionPeers: peerSessionDocRef =`, peerSessionDocRef);
+		const q = query(
+			collection(db, 'peers'),
+			where('peerSession', '==', peerSessionDocRef),
+			orderBy('updatedAt', 'desc'),
+			limit(limitNum)
+		);
 		const querySnap = await getDocs(q);
 		const results = [];
 		querySnap.forEach((docSnap) => {
