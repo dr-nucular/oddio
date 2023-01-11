@@ -1,8 +1,8 @@
 <script>
 import QRCode from 'qrcode'; // https://www.npmjs.com/package/qrcode
 import { onMount, onDestroy } from 'svelte';
-import { dbGetPeerSession, dbGetPeer, dbGetMyPeers, dbCreatePeer, dbUpdatePeer } from '../firebase.js';
-import { sAuthInfo, sModules, sPeerSession, sPeer, sMyPeers } from '../stores.js';
+import { dbGetPeerSession, dbGetPeer, dbGetMyPeers, dbCreatePeer, dbUpdatePeer, dbQueryPeerSessionPeers } from '../firebase.js';
+import { sAuthInfo, sModules, sPeerSession, sPeer, sMyPeers, sPeerSessionsAndTheirPeers } from '../stores.js';
 import { lsGetPeerSessionId, lsGetPeerId, lsSetPeerId, processUpdatedAtData } from './utils';
 
 import PeerManager from './PeerManager.js';
@@ -19,6 +19,7 @@ let modules = {};
 let peerSession;
 let peer;
 let myPeers;
+let peerSessionsAndTheirPeers;
 
 // other states
 const MAX_AGE_HOURS = 2000;
@@ -51,6 +52,7 @@ const unsubPeer = sPeer.subscribe(p => {
 const unsubMyPeers = sMyPeers.subscribe(arr => {
 	myPeers = arr.map(p => processUpdatedAtData(p));
 });
+const unsubPeerSessionsAndTheirPeers = sPeerSessionsAndTheirPeers.subscribe(obj => peerSessionsAndTheirPeers = obj);
 
 // onMount/onDestroy
 onMount(async () => {
@@ -74,6 +76,7 @@ onDestroy(() => {
 	unsubPeerSession();
 	unsubPeer();
 	unsubMyPeers();
+	unsubPeerSessionsAndTheirPeers();
 });
 
 
@@ -87,7 +90,21 @@ const initPeerSession = async () => {
 			const ps = await dbGetPeerSession(id);
 			const psUnpacked = { id: ps.id, data: ps.data() };
 			const tooOld = (Date.now() - psUnpacked.data.updatedAt.toDate().valueOf()) / (1000 * 60 * 60) > MAX_AGE_HOURS;
-			!tooOld && sPeerSession.set(psUnpacked);
+			if (!tooOld) {
+				sPeerSession.set(psUnpacked);
+
+				// add to peerSessionsAndTheirPeers
+				const pspArray = await dbQueryPeerSessionPeers(id);
+				console.log(`*** pspArray length:`, pspArray.length);
+				const pspArrayUnpacked = pspArray.map(psp => {
+					return { id: psp.id, data: psp.data() };
+				});
+				console.log(`*** pspArrayUnpacked:`, pspArrayUnpacked);
+				sPeerSessionsAndTheirPeers.update(obj => {
+					obj[id] = pspArrayUnpacked;
+					return obj;
+				});
+			}
 		}
 	} catch (err) {
 		console.error(`initPeerSession() ERROR:`, err);
@@ -100,10 +117,18 @@ const initPeer = async () => {
 		const id = lsGetPeerId();
 		if (id) {
 			// if there, load it from db and save to store
-			const ps = await dbGetPeer(id);
-			const psUnpacked = { id: ps.id, data: ps.data() };
-			const tooOld = false;//(Date.now() - psUnpacked.data.updatedAt.toDate().valueOf()) / (1000 * 60 * 60) > MAX_AGE_HOURS;
-			!tooOld && sPeer.set(psUnpacked);
+			const p = await dbGetPeer(id);
+			const pUnpacked = { id: p.id, data: p.data() };
+			const tooOld = false;//(Date.now() - pUnpacked.data.updatedAt.toDate().valueOf()) / (1000 * 60 * 60) > MAX_AGE_HOURS;
+			if (!tooOld) {
+				// replace peerSession docRef with unpacked data
+				console.log(`--- pUnpacked.data.peerSession`, pUnpacked.data.peerSession);
+				const ps = await dbGetPeerSession(pUnpacked.data.peerSession);
+				//const psUnpacked = { id: ps.id, data: ps.data() };
+				//pUnpacked.peerSession = psUnpacked;
+
+				sPeer.set(pUnpacked);
+			}
 		}
 	} catch (err) {
 		console.error(`initPeer() ERROR:`, err);
@@ -297,7 +322,15 @@ const addPeerToPeerSession = async () => {
 			<li>Name: {peerSession.data.name}</li>
 			<li>id: {peerSession.id}</li>
 			<li>last updated: {peerSession.data.updatedAtPretty}</li>
-			<li># peers: ... </li>
+			<li>
+				# peers:
+				{#if peerSessionsAndTheirPeers[peerSession.id]?.length}
+					{peerSessionsAndTheirPeers[peerSession.id].length}:
+					{peerSessionsAndTheirPeers[peerSession.id].map(psp => psp.data.name || psp.id).join(', ')}
+				{:else}
+					0
+				{/if}
+			</li>
 			<li><button on:click={() => generateQR(peerSession.id)}>Invite others to join</button></li>
 		</ul>
 		<canvas bind:this={qrCanvas}></canvas>
