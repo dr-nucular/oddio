@@ -1,6 +1,19 @@
 BEAT BATTLE dev plan
 --------------------
 
+1.11.23
+------------------------
+1. OK start a new route for a html screen that is a phaser canvas plus a little html below
+2. HMTL buttons are: login/logout | host new game ...   they work as they do now
+3. joining a game sesh w/ phone connects as "Player 1" or "Player 2" etc.
+    - controller says "player X" in a certain color, and has 2 buttos that can be pressed
+    - host screen shows all players and appropriate colors and their btton states?
+4. This demo shows host/controller communication
+5. add clock times to all screens (server clock and local/controller clocks) as a next step?
+6. final step could be to have a controller button schedule the playback of a track at a certain servertime, on host and all connected devices....  they should all be in sync
+
+
+
 1.9.2023
 --------------------------
 MAYBE i just need to find concrete product to make that uses the fewest core components including:
