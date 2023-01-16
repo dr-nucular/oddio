@@ -1,0 +1,47 @@
+<script>
+	let Phaser;
+	let Splash;
+	let GameScene;
+	let readyToLaunchPhaser = false;
+	if (typeof navigator !== "undefined") {
+		const phaserPromise = import("phaser").then(imported => {
+			//console.log(`** phaser imported. obj keys:`, Object.keys(imported));
+			Phaser = imported;
+		});
+		const splashPromise = import("../scenes/Splash").then(imported => {
+			console.log(`** Splash imported. obj keys:`, Object.keys(imported));
+			Splash = imported.default;
+		});
+		const gameScenePromise = import("../scenes/GameScene").then(imported => {
+			GameScene = imported.default;
+		});
+		Promise.all([phaserPromise, splashPromise, gameScenePromise]).then(() => {
+			readyToLaunchPhaser = true;
+
+			new Phaser.Game({
+				type: Phaser.AUTO,
+				parent: 'gamearea',
+				//backgroundColor: '#33A5E7',
+				scale: {
+					width: 1365,
+					height: 768,
+					mode: Phaser.Scale.FIT,
+					autoCenter: Phaser.Scale.CENTER_BOTH
+				},
+				physics: {
+					default: "arcade",
+					arcade: {
+						// debug: true,
+					},
+				},
+				audio: {
+					disableWebAudio: false,
+				},
+				scene: [Splash, GameScene]
+			});
+
+		});
+	}
+</script>
+
+
