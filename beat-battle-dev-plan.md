@@ -1,7 +1,27 @@
 BEAT BATTLE dev plan
 --------------------
 
-1.11.23
+1.16.2023
+----------------
+make PeerManager even bigger, encompassing all p2p stuff as well as some firebase stuffs?
+- not auth
+
+it maintains various states for a client
+- deviceId (new firebase table, has some device properties)
+    - aoId (new firebase table audioOutput or something, has output latencies)
+- userId (firebase uid)
+    - playerId (new firebase table)
+- gsId (firebase: groupSession id)
+- peerId (firebase: peer id)
+- peerServer stuff:
+    - peerNode (self peer id)
+    - peers' peerNodes
+    - peerConns to self
+
+
+
+
+1.11.2023
 ------------------------
 1. OK start a new route for a html screen that is a phaser canvas plus a little html below
 2. HMTL buttons are: login/logout | host new game ...   they work as they do now

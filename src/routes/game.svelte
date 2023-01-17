@@ -10,6 +10,7 @@
 	import { getUrlParams, lsSetPeerSessionId } from '$lib/utils.js';
 
 	import Game from '$lib/Game.svelte';
+	import GameTopNav from '$lib/Game-TopNav.svelte';
 
 	let authInfo = {};
 	let sidebarsVisible = false;
@@ -88,7 +89,7 @@
 
 <div id="wrapper" class:show-sidebars="{sidebarsVisible === true}">
 	<div id="header" class="head-and-foot">
-		Log in // Share link
+		<GameTopNav/>
 	</div>
 	<div class="sidebar">
 		Left sidebar goes here

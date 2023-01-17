@@ -46,7 +46,6 @@
 		color: #ccc;
 		font: italic 400 40px/35px Ubuntu;
 		white-space: normal;
-		//overflow: hidden;
 	}
 	.magic {
 		float: right;
