@@ -14,6 +14,7 @@
 
 	let authInfo = {};
 	let sidebarsVisible = false;
+	let modalVisible = false;
 
 	sAuthInfo.subscribe(obj => authInfo = obj);
 
@@ -78,11 +79,13 @@
 	const showSidebars = () => {
 		console.log(`SHOW`);
 		sidebarsVisible = true;
+		modalVisible = true;
 	};
 
 	const hideSidebars = () => {
 		console.log(`HIDE`);
 		sidebarsVisible = false;
+		modalVisible = false;
 	};
 
 </script>
@@ -104,6 +107,10 @@
 		<button on:click={() => showSidebars()}>Show Sidebars</button>
 		<button on:click={() => hideSidebars()}>Hide Sidebars</button>
 	</div>
+</div>
+
+<div id="modal" class:show-modal="{modalVisible === true}">
+	<div class="modal-content">Hello</div>
 </div>
 
 <style>
@@ -137,5 +144,25 @@
 	}
 	.show-sidebars {
 		grid-template-columns: 200px auto 200px !important;
+	}
+
+	#modal {
+		display: none;
+		position: absolute;
+		height: 100vh;
+		width: 100vw;
+		background-color: rgba(0,0,0,0.5);
+		top: 0; left: 0;
+	}
+	.modal-content {
+		background: green;
+		position: absolute;
+		float: left;
+		left: 50%;
+		top: 50%;
+		transform: translate(-50%, -50%);
+	}
+	.show-modal {
+		display: block !important;
 	}
 </style>
