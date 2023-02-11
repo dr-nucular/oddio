@@ -1,6 +1,13 @@
 BEAT BATTLE dev plan
 --------------------
 
+2.10.2023
+----------------
+Take a break from the complexity of the game.
+Focus on some audio, playing some audio and some spatializing fun.  Spin audio source(s) around listener.
+Then after it's working, try getting p2p shiz going, to control the audio stuff in some way
+
+
 1.16.2023
 ----------------
 make PeerManager even bigger, encompassing all p2p stuff as well as some firebase stuffs?
