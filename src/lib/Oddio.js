@@ -137,7 +137,7 @@ class Oddio {
 		return this.buffs[filename];
 	}
 
-	async load(fileOrFiles = []) {
+	async load(fileOrFiles = [], opts) {
 		// file (URI string) or files (array of URI strings) accepted
 		fileOrFiles = typeof fileOrFiles === 'string' ? [fileOrFiles] : fileOrFiles.slice(0);
 
@@ -145,12 +145,13 @@ class Oddio {
 		fileOrFiles.filter((elem, pos, arr) => elem && arr.indexOf(elem) === pos);
 		const promises = fileOrFiles.map((filename) => {
 			if (!this.buffs[filename]) {
-				this.buffs[filename] = new Buff(filename);
+				this.buffs[filename] = new Buff(filename, opts);
 			}
-			return this.buffs[filename].load();
+			return this.buffs[filename].load(opts);
 		});
 
-		await Promise.all(promises);
+		const buffs = await Promise.all(promises);
+		return buffs;
 	}
 
 	unload(fileOrFiles = []) {

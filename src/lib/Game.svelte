@@ -4,7 +4,7 @@ try {
 
 	let Phaser;
 	let Splash;
-	let GameScene;
+	let SpatialPlayground;
 	//let readyToLaunchPhaser = false;
 
 	const phaserPromise = import("phaser").then(imported => {
@@ -15,10 +15,10 @@ try {
 		//console.log(`** Splash imported. obj keys:`, Object.keys(imported));
 		Splash = imported.default;
 	});
-	const gameScenePromise = import("../scenes/GameScene").then(imported => {
-		GameScene = imported.default;
+	const spgPromise = import("../scenes/SpatialPlayground").then(imported => {
+		SpatialPlayground = imported.default;
 	});
-	Promise.all([phaserPromise, splashPromise, gameScenePromise]).then(() => {
+	Promise.all([phaserPromise, splashPromise, spgPromise]).then(() => {
 		//readyToLaunchPhaser = true;
 
 		new Phaser.Game({
@@ -40,7 +40,7 @@ try {
 			audio: {
 				disableWebAudio: false,
 			},
-			scene: [Splash, GameScene]
+			scene: [Splash, SpatialPlayground]
 		});
 
 	});

@@ -196,6 +196,24 @@ class Sound {
 		this.recentlySelected = []; // reset
 	}
 
+	loadBuffs(opts) {
+		const promises = this.buffs.map(buff => buff.load(opts));
+		return promises;
+	}
+
+	decodeBuffs(opts) {
+		const promises = this.buffs.map(buff => buff.decode(opts));
+		return promises;
+	}
+
+	undecodeBuffs() {
+		this.buffs.map(buff => buff.undecode());
+	}
+
+	unloadBuffs() {
+		this.buffs.map(buff => buff.unload());
+	}
+
 	getBuffer(selectionType = 'randomNoRepeat') {
 		// selectionType <str> is 'randomNoRepeat', 'exhaustiveRandom', random', or 'cycle'.   TODO: implement
 		// return AudioBuffer instance
