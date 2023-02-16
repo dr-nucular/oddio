@@ -26,6 +26,10 @@ class Buff {
 		this.updateStateData({});
 	}
 
+	refreshAudioContext() {
+		this.ac = Oddio.getAC();
+	}
+
 	// returns promise
 	load(opts) {
 		if (this.loadPromise) return this.loadPromise;
@@ -196,14 +200,18 @@ class Sound {
 		this.recentlySelected = []; // reset
 	}
 
+	getBuffs() {
+		return this.buffs;
+	}
+
 	loadBuffs(opts) {
 		const promises = this.buffs.map(buff => buff.load(opts));
-		return promises;
+		return Promise.all(promises);
 	}
 
 	decodeBuffs(opts) {
 		const promises = this.buffs.map(buff => buff.decode(opts));
-		return promises;
+		return Promise.all(promises);
 	}
 
 	undecodeBuffs() {

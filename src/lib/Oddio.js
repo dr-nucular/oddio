@@ -39,6 +39,10 @@ class Oddio {
 		}
 		try {
 			this.ac = new (window.AudioContext || window.webkitAudioContext)();
+			const buffsAlreadyCreated = Object.keys(this.buffs);
+			buffsAlreadyCreated.forEach(key => {
+				this.buffs[key].refreshAudioContext();
+			});
 		} catch (err) {
 			console.error(err);
 			return Promise.reject(err);

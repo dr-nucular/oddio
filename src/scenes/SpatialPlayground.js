@@ -11,7 +11,8 @@ export default class SpatialPlayground extends Phaser.Scene {
 		console.log(`SpatialPlayground.init()`);
 		this.canvas = this.sys.game.canvas;
 
-		this.textStyleLoaded = { fontFamily: 'Arial', fontSize: 32, color: 'red' };
+		this.textStyleError = { fontFamily: 'Arial', fontSize: 32, color: 'red' };
+		this.textStyleLoaded = { fontFamily: 'Arial', fontSize: 32, color: 'orange' };
 		this.textStyleDecoding = { fontFamily: 'Arial', fontSize: 32, color: 'yellow' };
 		this.textStyleDecoded = { fontFamily: 'Arial', fontSize: 32, color: 'green' };
 		this.textStylePlaying = { fontFamily: 'Arial', fontSize: 32, color: 'white' };
@@ -65,8 +66,8 @@ export default class SpatialPlayground extends Phaser.Scene {
 
 		// add interaction
 		this.tracks.forEach(track => {
-			track.textSprite.on('pointerup', (e) => {
-				this.onTrackUp(track, e);
+			track.textSprite.on('pointerdown', (e) => {
+				this.onTrackDn(track, e);
 			}, this);
 			track.textSprite.setInteractive();
 		});
@@ -98,9 +99,29 @@ export default class SpatialPlayground extends Phaser.Scene {
 		});
 	}
 
-	async onTrackUp(track, e) {
-		console.log(`SpatialPlayground.onTrackUp():`, track, e);
-		track.textSprite.setStyle(this.textStyleDecoding);
+	async onTrackDn(track, e) {
+		console.log(`SpatialPlayground.onTrackDn():`, track, e);
+		const buffs = track.soundData.sound.getBuffs();
+		const buffsLoaded = buffs.filter(b => b.stateData.loaded);
+		const buffsDecoding = buffs.filter(b => b.stateData.decoding);
+		const buffsDecoded = buffs.filter(b => b.stateData.decoded);
+		const buffsErrored = buffs.filter(b => b.stateData.error);
+
+		this.setTrackTextStyle(track);
+		if (buffsErrored.length) {
+			return;
+		}
+
+		if (buffsLoaded.length && !buffsDecoded.length && !buffsDecoding.length) {
+			track.soundData.sound.decodeBuffs().then(() => {
+				this.setTrackTextStyle(track); // done decoding
+			});
+			this.setTrackTextStyle(track); // will it change color to "decoding" right away?
+		} else if (buffsLoaded.length && buffsDecoded.length && !buffsDecoding.length) {
+			track.soundData.sound.undecodeBuffs();
+			this.setTrackTextStyle(track);
+		}
+
 		/*
 		const currentlyDown = this.buttonDownSprite.visible;
 		if (currentlyDown) {
@@ -120,6 +141,31 @@ export default class SpatialPlayground extends Phaser.Scene {
 		*/
 	}
 
+	setTrackTextStyle(track) {
+		console.log(`SpatialPlayground.setTrackTextStyle():`, track);
+
+		// based on Sound status
+		const buffs = track.soundData.sound.getBuffs();
+		const buffsLoaded = buffs.filter(b => b.stateData.loaded);
+		const buffsDecoding = buffs.filter(b => b.stateData.decoding);
+		const buffsDecoded = buffs.filter(b => b.stateData.decoded);
+		const buffsErrored = buffs.filter(b => b.stateData.error);
+		// TODO: playing
+		if (buffsErrored.length) {
+			// at least one errored out
+			track.textSprite.setStyle(this.textStyleError);
+			console.log(`... Error with track with sound id '${track.soundData.id}':`, track);
+		} else if (buffsDecoded.length) {
+			// at least one is decoded
+			track.textSprite.setStyle(this.textStyleDecoded);
+		} else if (buffsDecoding.length) {
+			// at least one is decoding
+			track.textSprite.setStyle(this.textStyleDecoding);
+		} else if (buffsLoaded.length) {
+			// at least one is loaded
+			track.textSprite.setStyle(this.textStyleLoaded);
+		}
+	}
 
 	transToNextScene() {
 		console.log(`SpatialPlayground.transToNextScene()`);
