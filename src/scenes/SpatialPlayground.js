@@ -6,6 +6,7 @@ const GRAPHS = {
 	"stereoMaster": {
 		"__type": "graph",
 		"__version": "1.0",
+		"id": "stereoMaster", // NEED THIS until we refactor
 		"singleton": true,
 		"publicNodes": true,
 		"graph": {
@@ -50,11 +51,11 @@ const GRAPHS = {
 								},
 								"orientation": {
 									"x": 0,
-									"y": -1,
-									"z": 0,
+									"y": 0,
+									"z": -1,
 									"upx": 0,
-									"upy": 0,
-									"upz": -1
+									"upy": 1,
+									"upz": 0
 								}
 							}
 						}
@@ -74,6 +75,7 @@ const GRAPHS = {
 	"monoSource": {
 		"__type": "graph",
 		"__version": "1.0",
+		"id": "monoSource", // NEED THIS until we refactor
 		"singleton": false,
 		"publicNodes": false,
 		"graph": {
@@ -86,7 +88,7 @@ const GRAPHS = {
 			},
 			"pan": {
 				"type": "panner",
-				"panning_model": "HRTF",
+				"panning_model": "HRTF", // TODO move to set?   at least rename it to panningModel
 				"dest": [
 					"mix"
 				]
@@ -107,10 +109,17 @@ const GRAPHS = {
 								"playbackRate": 1
 							},
 							"pan": {
-								"distanceModel": "linear",
+								"panningModel": "HRTF", // allow this to be set after creation?
+								"distanceModel": "inverse",
 								"refDistance": 1,
 								"maxDistance": 100,
-								"rolloffFactor": 1
+								"rolloffFactor": 1,
+								"coneInnerAngle": 90,
+								"coneOuterAngle": 270,
+								"coneOuterGain": 0.25,
+								"orientationX": 0,
+								"orientationY": 0,
+								"orientationZ": -1,								
 							},
 							"mix": {
 								"gain": 1
@@ -130,6 +139,18 @@ const GRAPHS = {
 							"src": {
 								"sound": "soundId",
 								"when": "acTime"
+							}
+						}
+					}
+				]
+			},
+			"move": {
+				"params": { "_x": 0, "_y": 0, "_z": 0 },
+				"steps": [
+					{
+						"set": {
+							"pan": {
+								"position": { "x": "_x", "y": "_y", "z": "_z" }
 							}
 						}
 					}
@@ -162,12 +183,13 @@ const GRAPHS = {
 	"stereoSource": {
 		"__type": "graph",
 		"__version": "1.0",
+		"id": "stereoSource", // NEED THIS until we refactor
 		"singleton": false,
 		"publicNodes": false,
 		"graph": {
 			"src": {
 				"type": "source",
-				"sound": "drums",
+				"sound": null,
 				"dest": [
 					"mix"
 				]
@@ -314,6 +336,10 @@ export default class SpatialPlayground extends Phaser.Scene {
 	init() {
 		console.log(`SpatialPlayground.init()`);
 		this.canvas = this.sys.game.canvas;
+		this.centerPosition = {
+			x: this.canvas.width * 0.5,
+			y: this.canvas.height * 0.5
+		};
 
 		
 
@@ -363,8 +389,8 @@ export default class SpatialPlayground extends Phaser.Scene {
 		this.tracks = this.soundsArray.map((soundData, s) => {
 			const perc = s / this.soundsArray.length;
 			const rads = perc * 2 * Math.PI;
-			const x = (this.canvas.width * 0.5) + (Math.sin(rads) * 300);
-			const y = (this.canvas.height * 0.5) - (Math.cos(rads) * 300);
+			const x = this.centerPosition.x + (Math.sin(rads) * 300);
+			const y = this.centerPosition.y - (Math.cos(rads) * 300);
 			const textSprite = this.add.text(x, y, `${soundData.id}`, this.textStyleLoaded);
 			textSprite.setOrigin(0.5, 0.5);
 			return { soundData, textSprite };
@@ -380,8 +406,8 @@ export default class SpatialPlayground extends Phaser.Scene {
 
 		// playText
 		this.playText = this.add.text(
-			this.canvas.width * 0.5,
-			this.canvas.height * 0.5,
+			this.centerPosition.x,
+			this.centerPosition.y,
 			`PLAY`,
 			this.textStylePlaying
 		);
@@ -404,28 +430,38 @@ export default class SpatialPlayground extends Phaser.Scene {
 			repeat: -1
 		});
 
-		this.loadGraphs();
+		this.setGraphs();
 	}
 
 	update(time, delta) {
-		const s = time * 0.0001;
+		const s = time * 0.0005;
 		this.tracks.forEach((track, t) => {
 			const perc = t / this.tracks.length;
-			const rads = perc * 2 * Math.PI;
-			const x = (this.canvas.width * 0.5) + (Math.sin(rads + s) * 300);
-			const y = (this.canvas.height * 0.5) - (Math.cos(rads + s) * 300);
+			const rads = perc * 1 * Math.PI;
+			const x = this.centerPosition.x + (Math.sin(rads + s) * 300);
+			const y = this.centerPosition.y - (Math.cos(rads + s) * 300);
 			track.textSprite.setPosition(x, y);
+
+			// voice set position. y maps to z in 3d space
+			if (track.voice?.graphId === 'monoSource') {
+				const oddioPosX = x / this.centerPosition.x - 1.0; // -1 to +1, Left to Right
+				const oddioPosZ = y / this.centerPosition.y - 1.0; // -1 to +1, Front to Rear
+				track.voice.doMethod('move', {
+					_x: oddioPosX, _z: oddioPosZ
+				});
+			}
 		});
 	}
 
-	loadGraphs() {
-		console.log(`SpatialPlayground.loadGraphs()`);
+	setGraphs() {
+		console.log(`SpatialPlayground.setGraphs()`);
 		const graphKeys = Object.keys(GRAPHS);
 		graphKeys.map(async gKey => {
 			Oddio.setGraph(gKey, GRAPHS[gKey]);
 		});
-
 		// create outputGraph instance
+		const outputVoice = Oddio.createVoice('stereoMaster', 'output');
+		outputVoice.doMethod('init');
 	}
 
 	async onTrackDn(track, e) {
@@ -472,16 +508,44 @@ export default class SpatialPlayground extends Phaser.Scene {
 
 	togglePlay(e) {
 		console.log(`SpatialPlayground.togglePlay():`, e);
-		if (this.playText.text === 'PLAY') {
-			this.playText.setText(`STOP`);
-		} else {
+		if (this.playText.text === 'STOP') {
+			// STOP all voices in this.tracks
+			this.tracks.forEach(track => {
+				track.voice?.doMethod('stop', { acTime: 0 });
+			});
+
 			this.playText.setText(`PLAY`);
 
+		} else {
+			// PLAY
+
 			this.tracks.forEach(track => {
+				
 				const buffs = track.soundData.sound.getBuffs();
 				const buffsDecoded = buffs.filter(b => b.stateData.decoded);
 				if (buffsDecoded.length) {
+					
 					console.log(`... will play track ${track.soundData.id}`);
+
+					if (!track.voice) {
+						// create, init
+						const soundAudioBuffer = track.soundData.sound.getBuffer();
+						const numChannels = soundAudioBuffer.numberOfChannels;
+						if (numChannels === 2) {
+							track.voice = Oddio.createVoice('stereoSource', `${track.soundData.id}-voice`);
+						} else {
+							track.voice = Oddio.createVoice('monoSource', `${track.soundData.id}-voice`);
+						}
+						track.voice.doMethod('init');
+					}
+					track.voice.doMethod('play', {
+						soundId: track.soundData.id,
+						acTime: 0
+					});
+	
+					
+					//const monoVoice = Oddio.createVoice('monoSource', '');
+
 					/*
 					// do it... based on event props
 					if (event.createVoice) {
@@ -492,13 +556,17 @@ export default class SpatialPlayground extends Phaser.Scene {
 						voice.doMethod(event.method.name, { acTime: when });
 					}
 					*/
+				} else {
+					// no available buffers to play for this track.  if there's a voice defined from
+					// before (when there was an available buffer), destroy it.
+					if (track.voice) {
+						track.voice.destroy();
+						delete track.voice;
+					}
 				}
 			});
-	
 
-				
-
-
+			this.playText.setText(`STOP`);
 		}
 	}
 

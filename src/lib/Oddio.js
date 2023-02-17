@@ -1,14 +1,14 @@
 /**
  * Oddio.js
  * - HTML5 WebAudio API interface
- * (c) 2019-2022 by Owen Grace
+ * (c) 2019-2023 by Owen Grace
  */
 
 import { Buff, Sound } from './Sound';
 import { Graph, Voice } from './Graph';
 import { ScheduledEvent, Scheduler } from './Scheduler';
 
-const DEBUG = true;
+const DEBUG = false;
 
 class Oddio {
 	//static instance;
@@ -176,7 +176,7 @@ class Oddio {
 
 
 	/* SOUNDS */
-	setSound(id, buffs) {
+	setSound(id, buffs) { // TODO: make params obj
 		if (!id || typeof id !== 'string') {
 			console.error(`Oddio.setSound() ERROR: id must be provided.`);
 			return;
@@ -203,7 +203,7 @@ class Oddio {
 
 
 	/* GRAPHS */
-	setGraph(id, data) {
+	setGraph(id, data) { // TODO: make params obj
 		//const id = data?.id;
 		if (!id || typeof id !== 'string') {
 			console.error(`Oddio.setGraph() ERROR: id must be provided.`);
@@ -224,7 +224,7 @@ class Oddio {
 			return;
 		}
 		if (!this.graphs[id]) {
-			console.error(`Oddio.getGraph() ERROR: no graph of id "${id}" found.`);
+			console.error(`Oddio.getGraph() ERROR: no graph w/ id "${id}" found.`);
 		}
 		return this.graphs[id];
 	}

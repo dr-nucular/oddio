@@ -21,6 +21,7 @@ class Buff {
 			decoding: false,
 			decoded: false,
 			error: false
+			// add playing?  or add ability to lock state while playing (to prevent undecoding while busy?)
 		};
 
 		this.updateStateData({});
@@ -194,6 +195,8 @@ class Sound {
 	constructor(buffOrBuffs, opts) {
 		this.setBuffs(buffOrBuffs);
 		// opts: stateCallback here too?
+		// could be handy to optionally pre-select next buff to play,
+		// so can assess length or numChannels ahead of playing?
 	}
 
 	setBuffs(buffOrBuffs) {
@@ -228,7 +231,7 @@ class Sound {
 		// return AudioBuffer instance
 
 		// filter this.buffs to make playable buffs
-		const playableBuffs = this.buffs.filter(buff => buff && buff.audioBuffer);
+		const playableBuffs = this.buffs.filter(buff => buff?.getAudioBuffer());
 
 		// bail if there are 0
 		const numBuffs = playableBuffs.length;

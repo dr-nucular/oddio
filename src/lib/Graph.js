@@ -1,6 +1,6 @@
 import Oddio from './Oddio';
 
-const DEBUG = true;
+const DEBUG = false;
 
 class Graph {
 	constructor(config) {
@@ -243,6 +243,7 @@ class Voice {
 						//this.graph[g]._audio_node.panningModel = this.graph[g]._audio_node[this.graph[g].panner_model];
 					}
 					this.graph[g]._props = {};
+					//this.graph[g]._props.panningModel = 'equalpower'; // TODO
 					this.graph[g]._props.distanceModel = 'inverse';
 					this.graph[g]._props.refDistance = 1.0; // min distance
 					this.graph[g]._props.maxDistance = 10000.0; // max distance
@@ -404,11 +405,12 @@ class Voice {
 	_play(nodeName, nodeInfo, params) {
 		DEBUG && console.log('ODDIO PLAY: nodeName:', nodeName, 'nodeInfo:', nodeInfo, 'params:', params);
 		if (nodeInfo.type === 'source') {
+
+			if (params.sound) nodeInfo.sound = params.sound; // override
+
 			if (typeof nodeInfo.sound !== 'undefined') {
 				//console.log("PLAY: source node:", nodeName);
-				// PLAY params: sound, when, delay, offset, duration
-				
-				if (params.sound) nodeInfo.sound = params.sound; // override
+				// PLAY params: sound (override above), when, delay, offset, duration
 				let when = params.when ?? this.ac.currentTime;
 				if (params.delay) when += params.delay;
 				const offset = params.offset || 0.0;
@@ -446,7 +448,7 @@ class Voice {
 					);
 				}
 			} else {
-				console.warn(`Voice._play(): graph[${nodeName}].sound required, skipping.`);
+				console.warn(`Voice._play(): graph[${nodeName}].sound (or sound override) required, skipping.`);
 			}
 		} else if (nodeInfo.type === 'oscillator') {
 			//console.log("PLAY: oscillator node:", nodeName);
