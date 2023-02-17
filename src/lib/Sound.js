@@ -94,8 +94,9 @@ class Buff {
 		this.decodePromise = new Promise((resolve, reject) => {
 			DEBUG && console.log(`Buff.decode() STARTED: ${this.filename}`);
 			this.updateStateData({ decoding: true });
+			const arrayBuffCopy = this.xhrResponse.slice(0); // TODO: enable repeated decodings via constructor flag
 			this.ac.decodeAudioData(
-				this.xhrResponse,
+				arrayBuffCopy,
 				(audioBuffer) => {
 					// only save decoded result if this.decodePromise or this.loadPromise haven't been nulled...
 					// if either has, then download was likely canceled intentionally via undecode() or unload().

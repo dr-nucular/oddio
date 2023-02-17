@@ -3,6 +3,38 @@ import Oddio from '$lib/Oddio';
 //import { delay } from '$lib/utils';
 import { sBuffs, sSounds } from '../stores.js';
 
+const SOUNDSET = {
+	"stereoTrackz": {
+		"__type": "soundSet",
+		"__version": "1.0",
+		"ideas": "cut up the clips above to start where they need to? i should make the playback engine well where i can start any piece from any point, it backtracks events and figures out what is playing and with what offset and volume and pan etc. asset loading should be all about managing whats in mem, with a load and unload event that fires a little in advance of its needs.",
+		"sounds": {
+			"drums": "https://www.openears.net/jog/02_drums.ogg",
+			"metal": "https://www.openears.net/jog/02_metal.ogg"
+		}
+	},
+	"monoTrackz": {
+		"__type": "soundSet",
+		"__version": "1.0",
+		"sounds": {
+			"strum1": "https://www.openears.net/jog/02_acoustic_1.ogg",
+			"strum2": "https://www.openears.net/jog/02_acoustic_2.ogg",
+			"strum3": "https://www.openears.net/jog/02_acoustic_3.ogg",
+			"bass": "https://www.openears.net/jog/02_bass.ogg",
+			"ebow1": "https://www.openears.net/jog/02_ebow_1.ogg",
+			"ebow2": "https://www.openears.net/jog/02_ebow_2.ogg",
+			"ebow3": "https://www.openears.net/jog/02_ebow_3.ogg",
+			"ebow4": "https://www.openears.net/jog/02_ebow_4.ogg",
+			"elecGuit": "https://www.openears.net/jog/02_electric_guitar.ogg",
+			"odd1": "https://www.openears.net/jog/02_odd_1.ogg",
+			"odd2": "https://www.openears.net/jog/02_odd_2.ogg",
+			"odd3": "https://www.openears.net/jog/02_odd_3.ogg",
+			"synth": "https://www.openears.net/jog/02_synth.ogg"
+		}
+	}
+};
+
+
 export default class Splash extends Phaser.Scene {
 	constructor() {
 		console.log(`Splash.constructor()`);
@@ -120,42 +152,11 @@ export default class Splash extends Phaser.Scene {
 	async preloadOddio() {
 		console.log(`Splash.preloadOddio()`);
 		try {
-			const configJson = {
-				"stereoTrackz": {
-					"__type": "soundSet",
-					"__version": "1.0",
-					"ideas": "cut up the clips above to start where they need to? i should make the playback engine well where i can start any piece from any point, it backtracks events and figures out what is playing and with what offset and volume and pan etc. asset loading should be all about managing whats in mem, with a load and unload event that fires a little in advance of its needs.",
-					"sounds": {
-						"drums": "https://www.openears.net/jog/02_drums.ogg",
-						"metal": "https://www.openears.net/jog/02_metal.ogg"
-					}
-				},
-				"monoTrackz": {
-					"__type": "soundSet",
-					"__version": "1.0",
-					"sounds": {
-						"strum1": "https://www.openears.net/jog/02_acoustic_1.ogg",
-						"strum2": "https://www.openears.net/jog/02_acoustic_2.ogg",
-						"strum3": "https://www.openears.net/jog/02_acoustic_3.ogg",
-						"bass": "https://www.openears.net/jog/02_bass.ogg",
-						"ebow1": "https://www.openears.net/jog/02_ebow_1.ogg",
-						"ebow2": "https://www.openears.net/jog/02_ebow_2.ogg",
-						"ebow3": "https://www.openears.net/jog/02_ebow_3.ogg",
-						"ebow4": "https://www.openears.net/jog/02_ebow_4.ogg",
-						"elecGuit": "https://www.openears.net/jog/02_electric_guitar.ogg",
-						"odd1": "https://www.openears.net/jog/02_odd_1.ogg",
-						"odd2": "https://www.openears.net/jog/02_odd_2.ogg",
-						"odd3": "https://www.openears.net/jog/02_odd_3.ogg",
-						"synth": "https://www.openears.net/jog/02_synth.ogg"
-					}
-				}
-			};
-
-			const soundSetKeys = Object.keys(configJson);
+			const soundSetKeys = Object.keys(SOUNDSET);
 			const allLoadPromises = soundSetKeys.map(async ssKey => {
-				const ssSounds = configJson[ssKey].sounds;
+				const ssSounds = SOUNDSET[ssKey].sounds;
 				const soundKeys = Object.keys(ssSounds);
-				//console.log(`- configJson.sounds (keys):`, soundKeys);
+				//console.log(`- SOUNDSET.sounds (keys):`, soundKeys);
 
 				const ssLoadPromises = soundKeys.map(async sKey => {
 					// each value can be a filename string, or an array of filenames
