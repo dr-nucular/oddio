@@ -143,9 +143,10 @@ export default class Splash extends Phaser.Scene {
 		const numLoaded = this.buffsArray.filter(k => k.stateData.loaded).length;
 		const numDecoding = this.buffsArray.filter(k => k.stateData.decoding).length;
 		const numDecoded = this.buffsArray.filter(k => k.stateData.decoded).length;
+		/*
 		console.log(`Splash.update(): buffs total, loading, loaded, decoding, decoded =`,
 			totalBuffs, numLoading, numLoaded, numDecoding, numDecoded);
-
+		*/
 		// could also iterate through this.soundsArray[] and look at each sound's buffs, and report if > 1 buff for each is ready to play?
 	}
 

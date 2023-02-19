@@ -12,51 +12,35 @@ const GRAPHS = {
 		"graph": {
 			"master:stereoBus": {
 				"type": "gain",
-				"dest": [
-					"master:stereoCmp"
-				]
+				"dest": [ "master:stereoCmp" ]
 			},
 			"master:stereoCmp": {
 				"type": "compressor",
-				"dest": [
-					"master:stereoVol"
-				]
+				"dest": [ "master:stereoVol" ]
 			},
 			"master:stereoVol": {
 				"type": "gain",
-				"dest": [
-					"master:output"
-				]
+				"dest": [ "master:output" ]
 			},
-			"master:output": {
-				"type": "output"
-			}
+			"master:output": { "type": "output" }
 		},
 		"methods": {
 			"init": {
 				"steps": [
 					{
 						"set": {
-							"master:stereoBus": {
-								"gain": 1
-							},
-							"master:stereoVol": {
-								"gain": 1
-							},
+							"master:stereoBus": { "gain": 1 },
+							"master:stereoVol": { "gain": 1 },
 							"master:output": {
-								"position": {
-									"x": 0,
-									"y": 0,
-									"z": 0
-								},
-								"orientation": {
-									"x": 0,
-									"y": 0,
-									"z": -1,
-									"upx": 0,
-									"upy": 1,
-									"upz": 0
-								}
+								"positionX": 0,
+								"positionY": 0,
+								"positionZ": 0,
+								"forwardX": 0,
+								"forwardY": 0,
+								"forwardZ": -1,
+								"upX": 0,
+								"upY": 1,
+								"upZ": 0
 							}
 						}
 					}
@@ -82,22 +66,16 @@ const GRAPHS = {
 			"src": {
 				"type": "source",
 				"sound": null,
-				"dest": [
-					"pan"
-				]
+				"dest": [ "pan" ]
 			},
 			"pan": {
 				"type": "panner",
-				"panning_model": "HRTF", // TODO move to set?   at least rename it to panningModel
-				"dest": [
-					"mix"
-				]
+				"panningModel": "HRTF", // TODO move to set?
+				"dest": [ "mix" ]
 			},
 			"mix": {
 				"type": "gain",
-				"dest": [
-					"master:stereoBus"
-				]
+				"dest": [ "master:stereoBus" ]
 			}
 		},
 		"methods": {
@@ -105,9 +83,7 @@ const GRAPHS = {
 				"steps": [
 					{
 						"set": {
-							"src": {
-								"playbackRate": 1
-							},
+							"src": { "playbackRate": 1 },
 							"pan": {
 								"panningModel": "HRTF", // allow this to be set after creation?
 								"distanceModel": "inverse",
@@ -117,40 +93,39 @@ const GRAPHS = {
 								"coneInnerAngle": 90,
 								"coneOuterAngle": 270,
 								"coneOuterGain": 0.25,
+								"positionX": 0,
+								"positionY": 0,
+								"positionZ": 0,
 								"orientationX": 0,
 								"orientationY": 0,
 								"orientationZ": -1,								
 							},
-							"mix": {
-								"gain": 1
-							}
+							"mix": { "gain": 1 }
 						}
 					}
 				]
 			},
 			"play": {
-				"params": {
-					"soundId": null,
-					"acTime": 0
-				},
+				"params": { "soundId": null, "acTime": 0 },
 				"steps": [
 					{
 						"play": {
-							"src": {
-								"sound": "soundId",
-								"when": "acTime"
-							}
+							"src": { "sound": "soundId", "when": "acTime" }
 						}
 					}
 				]
 			},
 			"move": {
-				"params": { "_x": 0, "_y": 0, "_z": 0 },
+				"params": { "delay": 0, "x": 0, "y": 0, "z": 0 },
 				"steps": [
 					{
 						"set": {
 							"pan": {
-								"position": { "x": "_x", "y": "_y", "z": "_z" }
+								"delay": "delay",
+								"positionX": "x",
+								"positionY": "y",
+								"positionZ": "z",
+								"ramp": 1
 							}
 						}
 					}
@@ -163,9 +138,7 @@ const GRAPHS = {
 				"steps": [
 					{
 						"stop": {
-							"src": {
-								"when": "acTime"
-							}
+							"src": { "when": "acTime" }
 						}
 					}
 				]
@@ -190,15 +163,11 @@ const GRAPHS = {
 			"src": {
 				"type": "source",
 				"sound": null,
-				"dest": [
-					"mix"
-				]
+				"dest": [ "mix" ]
 			},
 			"mix": {
 				"type": "gain",
-				"dest": [
-					"master:stereoBus"
-				]
+				"dest": [ "master:stereoBus" ]
 			}
 		},
 		"methods": {
@@ -206,43 +175,28 @@ const GRAPHS = {
 				"steps": [
 					{
 						"set": {
-							"src": {
-								"loop": false,
-								"playbackRate": 1
-							},
-							"mix": {
-								"gain": 1
-							}
+							"src": { "loop": false, "playbackRate": 1 },
+							"mix": { "gain": 1 }
 						}
 					}
 				]
 			},
 			"play": {
-				"params": {
-					"soundId": null,
-					"acTime": 0
-				},
+				"params": { "soundId": null, "acTime": 0 },
 				"steps": [
 					{
 						"play": {
-							"src": {
-								"sound": "soundId",
-								"when": "acTime"
-							}
+							"src": { "sound": "soundId", "when": "acTime" }
 						}
 					}
 				]
 			},
 			"stop": {
-				"params": {
-					"acTime": 0
-				},
+				"params": { "acTime": 0 },
 				"steps": [
 					{
 						"stop": {
-							"src": {
-								"when": "acTime"
-							}
+							"src": { "when": "acTime" }
 						}
 					}
 				]
@@ -370,6 +324,7 @@ export default class SpatialPlayground extends Phaser.Scene {
 		this.textStyleDecoded = { fontFamily: 'Arial', fontSize: 32, color: 'green' };
 		this.textStylePlaying = { fontFamily: 'Arial', fontSize: 32, color: 'white' };
 		this.playText = null;
+		this.updatePosText = null;
 
 		this.tracks = []; // array of objs
 		this.voices = [];
@@ -417,6 +372,19 @@ export default class SpatialPlayground extends Phaser.Scene {
 		}, this);
 		this.playText.setInteractive();
 
+		// updatePosText
+		this.updatePosText = this.add.text(
+			this.centerPosition.x,
+			this.centerPosition.y + 50,
+			`UPDATE POS`,
+			this.textStylePlaying
+		);
+		this.updatePosText.setOrigin(0.5, 0.5);
+		this.updatePosText.on('pointerdown', (e) => {
+			this.updatePos(e);
+		}, this);
+		this.updatePosText.setInteractive();
+		
 
 		// dumb thing
 		const logo = this.add.image(this.canvas.width * 0.15, this.canvas.height * 0.05, 'logo');
@@ -441,15 +409,37 @@ export default class SpatialPlayground extends Phaser.Scene {
 			const x = this.centerPosition.x + (Math.sin(rads + s) * 300);
 			const y = this.centerPosition.y - (Math.cos(rads + s) * 300);
 			track.textSprite.setPosition(x, y);
-
+			/*
 			// voice set position. y maps to z in 3d space
 			if (track.voice?.graphId === 'monoSource') {
 				const oddioPosX = x / this.centerPosition.x - 1.0; // -1 to +1, Left to Right
 				const oddioPosZ = y / this.centerPosition.y - 1.0; // -1 to +1, Front to Rear
 				track.voice.doMethod('move', {
-					_x: oddioPosX, _z: oddioPosZ
+					delay: 1 / 60, x: oddioPosX, z: oddioPosZ
 				});
 			}
+			*/
+		});
+	}
+
+	updatePos(e) {
+		console.log(`SpatialPlayground.updatePos():`, e);
+		this.tracks.forEach((track, t) => {
+
+			
+			// voice set position. y maps to z in 3d space
+			if (track.voice?.graphId === 'monoSource') {
+				const x = track.textSprite.x;
+				const y = track.textSprite.y;
+				console.log(`....updatePos of ${track.soundData.id}:`, x, y);
+	
+				const oddioPosX = x / this.centerPosition.x - 1.0; // -1 to +1, Left to Right
+				const oddioPosZ = y / this.centerPosition.y - 1.0; // -1 to +1, Front to Rear
+				track.voice.doMethod('move', {
+					delay: 1 / 60, x: oddioPosX, z: oddioPosZ
+				});
+			}
+			
 		});
 	}
 

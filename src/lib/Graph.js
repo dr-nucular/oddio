@@ -1,6 +1,6 @@
 import Oddio from './Oddio';
 
-const DEBUG = false;
+const DEBUG = true;
 
 class Graph {
 	constructor(config) {
@@ -237,23 +237,21 @@ class Voice {
 					this.graph[g]._audio_node.onaudioprocess = this.graph[g]._props.onaudioprocess;
 				} else if (this.graph[g].type === 'panner') {
 					this.graph[g]._audio_node = this.ac.createPanner();
-					if (typeof this.graph[g].panning_model !== 'undefined') {
-						this.graph[g]._audio_node.panningModel = this.graph[g].panning_model;
-						// old way:
-						//this.graph[g]._audio_node.panningModel = this.graph[g]._audio_node[this.graph[g].panner_model];
+					if (this.graph[g].panningModel) {
+						this.graph[g]._audio_node.panningModel = this.graph[g].panningModel;
 					}
 					this.graph[g]._props = {};
 					//this.graph[g]._props.panningModel = 'equalpower'; // TODO
 					this.graph[g]._props.distanceModel = 'inverse';
-					this.graph[g]._props.refDistance = 1.0; // min distance
-					this.graph[g]._props.maxDistance = 10000.0; // max distance
-					this.graph[g]._props.rolloffFactor = 1.0;
-					this.graph[g]._props.pos_x = 0.0;
-					this.graph[g]._props.pos_y = 0.0;
-					this.graph[g]._props.pos_z = 0.0;
-					this.graph[g]._props.vel_x = 0.0;
-					this.graph[g]._props.vel_y = 0.0;
-					this.graph[g]._props.vel_z = 0.0;
+					this.graph[g]._props.refDistance = 1; // min distance
+					this.graph[g]._props.maxDistance = 10000; // max distance
+					this.graph[g]._props.rolloffFactor = 1;
+					this.graph[g]._props.positionX = 0;
+					this.graph[g]._props.positionY = 0;
+					this.graph[g]._props.positionZ = 0;
+					this.graph[g]._props.orientationX = 1;
+					this.graph[g]._props.orientationY = 0;
+					this.graph[g]._props.orientationZ = 0;
 				} else if (this.graph[g].type === 'compressor') {
 					this.graph[g]._audio_node = this.ac.createDynamicsCompressor();
 					this.graph[g]._props = {};
@@ -262,19 +260,15 @@ class Voice {
 				} else if (this.graph[g].type === 'output') {
 					this.graph[g]._audio_node = this.ac.destination;
 					this.graph[g]._props = {};
-					this.graph[g]._props.dopplerFactor = 1.0;
-					this.graph[g]._props.pos_x = 0.0;
-					this.graph[g]._props.pos_y = 0.0;
-					this.graph[g]._props.pos_z = 0.0;
-					this.graph[g]._props.vel_x = 0.0;
-					this.graph[g]._props.vel_y = 0.0;
-					this.graph[g]._props.vel_z = 0.0;
-					this.graph[g]._props.ori_x = 0.0;
-					this.graph[g]._props.ori_y = 0.0;
-					this.graph[g]._props.ori_z = -1.0; // init forward
-					this.graph[g]._props.oriup_x = 0.0;
-					this.graph[g]._props.oriup_y = 1.0; // init up
-					this.graph[g]._props.oriup_z = 0.0;
+					this.graph[g]._props.positionX = 0;
+					this.graph[g]._props.positionY = 0;
+					this.graph[g]._props.positionZ = 0;
+					this.graph[g]._props.forwardX = 0;
+					this.graph[g]._props.forwardY = 0;
+					this.graph[g]._props.forwardZ = -1;
+					this.graph[g]._props.upX = 0;
+					this.graph[g]._props.upY = 1;
+					this.graph[g]._props.upZ = 0;
 				} else {
 					console.warn(`Voice.buildGraph(): type '${this.graph[g].type}' not supported`);
 				}
@@ -810,41 +804,64 @@ class Voice {
 			}
 			// PANNER
 			else if (nodeInfo.type === 'panner') {
-				if (p === 'position') {
-					// update position only when we need to
-					if (
-						nodeInfo._props.pos_x !== params[p].x ||
-						nodeInfo._props.pos_y !== params[p].y ||
-						nodeInfo._props.pos_z !== params[p].z
-					) {
-						//console.log("...updating sound position:", params[p].x, params[p].y, params[p].z);
-						nodeInfo._props.pos_x = params[p].x;
-						nodeInfo._props.pos_y = params[p].y;
-						nodeInfo._props.pos_z = params[p].z;
-						if (nodeInfo._audio_node) {
-							nodeInfo._audio_node.setPosition(
-								nodeInfo._props.pos_x,
-								nodeInfo._props.pos_y,
-								nodeInfo._props.pos_z
-							);
+				if (p === 'positionX') {
+					nodeInfo._props.positionX = params[p];
+					if (nodeInfo._audio_node) {
+						nodeInfo._audio_node.positionX.cancelScheduledValues(when);
+						if (ramp === 0) {
+							nodeInfo._audio_node.positionX.setValueAtTime(nodeInfo._props.positionX, when);
+						} else {
+							nodeInfo._audio_node.positionX.setTargetAtTime(nodeInfo._props.positionX, when, ramp);
 						}
 					}
-				} else if (p === 'velocity') {
-					// update velocity only when we need to
-					if (
-						nodeInfo._props.vel_x !== params[p].x ||
-						nodeInfo._props.vel_y !== params[p].y ||
-						nodeInfo._props.vel_z !== params[p].z
-					) {
-						nodeInfo._props.vel_x = params[p].x;
-						nodeInfo._props.vel_y = params[p].y;
-						nodeInfo._props.vel_z = params[p].z;
-						if (nodeInfo._audio_node) {
-							nodeInfo._audio_node.setVelocity(
-								nodeInfo._props.vel_x,
-								nodeInfo._props.vel_y,
-								nodeInfo._props.vel_z
-							);
+				} else if (p === 'positionY') {
+					nodeInfo._props.positionY = params[p];
+					if (nodeInfo._audio_node) {
+						nodeInfo._audio_node.positionY.cancelScheduledValues(when);
+						if (ramp === 0) {
+							nodeInfo._audio_node.positionY.setValueAtTime(nodeInfo._props.positionY, when);
+						} else {
+							nodeInfo._audio_node.positionY.setTargetAtTime(nodeInfo._props.positionY, when, ramp);
+						}
+					}
+				} else if (p === 'positionZ') {
+					nodeInfo._props.positionZ = params[p];
+					if (nodeInfo._audio_node) {
+						nodeInfo._audio_node.positionZ.cancelScheduledValues(when);
+						if (ramp === 0) {
+							nodeInfo._audio_node.positionZ.setValueAtTime(nodeInfo._props.positionZ, when);
+						} else {
+							nodeInfo._audio_node.positionZ.setTargetAtTime(nodeInfo._props.positionZ, when, ramp);
+						}
+					}
+				} else if (p === 'orientationX') {
+					nodeInfo._props.orientationX = params[p];
+					if (nodeInfo._audio_node) {
+						nodeInfo._audio_node.orientationX.cancelScheduledValues(when);
+						if (ramp === 0) {
+							nodeInfo._audio_node.orientationX.setValueAtTime(nodeInfo._props.orientationX, when);
+						} else {
+							nodeInfo._audio_node.orientationX.setTargetAtTime(nodeInfo._props.orientationX, when, ramp);
+						}
+					}
+				} else if (p === 'orientationY') {
+					nodeInfo._props.orientationY = params[p];
+					if (nodeInfo._audio_node) {
+						nodeInfo._audio_node.orientationY.cancelScheduledValues(when);
+						if (ramp === 0) {
+							nodeInfo._audio_node.orientationY.setValueAtTime(nodeInfo._props.orientationY, when);
+						} else {
+							nodeInfo._audio_node.orientationY.setTargetAtTime(nodeInfo._props.orientationY, when, ramp);
+						}
+					}
+				} else if (p === 'orientationZ') {
+					nodeInfo._props.orientationZ = params[p];
+					if (nodeInfo._audio_node) {
+						nodeInfo._audio_node.orientationZ.cancelScheduledValues(when);
+						if (ramp === 0) {
+							nodeInfo._audio_node.orientationZ.setValueAtTime(nodeInfo._props.orientationZ, when);
+						} else {
+							nodeInfo._audio_node.orientationZ.setTargetAtTime(nodeInfo._props.orientationZ, when, ramp);
 						}
 					}
 				} else if (p === 'distanceModel') {
@@ -877,75 +894,96 @@ class Voice {
 			}
 			// OUTPUT
 			else if (nodeInfo.type === 'output') {
-				if (p === 'position') {
-					// update position only when we need to
-					if (
-						nodeInfo._props.pos_x !== params[p].x ||
-						nodeInfo._props.pos_y !== params[p].y ||
-						nodeInfo._props.pos_z !== params[p].z
-					) {
-						//console.log("updating listener:", params[p].x, params[p].y, params[p].z);
-						nodeInfo._props.pos_x = params[p].x;
-						nodeInfo._props.pos_y = params[p].y;
-						nodeInfo._props.pos_z = params[p].z;
-						if (this.ac.listener) {
-							this.ac.listener.setPosition(
-								nodeInfo._props.pos_x,
-								nodeInfo._props.pos_y,
-								nodeInfo._props.pos_z
-							);
-						}
-					}
-				} else if (p === 'velocity') {
-					// update velocity only when we need to
-					if (
-						nodeInfo._props.vel_x !== params[p].x ||
-						nodeInfo._props.vel_y !== params[p].y ||
-						nodeInfo._props.vel_z !== params[p].z
-					) {
-						nodeInfo._props.vel_x = params[p].x;
-						nodeInfo._props.vel_y = params[p].y;
-						nodeInfo._props.vel_z = params[p].z;
-						if (this.ac.listener) {
-							this.ac.listener.setVelocity(
-								nodeInfo._props.vel_x,
-								nodeInfo._props.vel_y,
-								nodeInfo._props.vel_z
-							);
-						}
-					}
-				} else if (p === 'orientation') {
-					// update orientation only when we need to
-					if (
-						nodeInfo._props.ori_x !== params[p].x ||
-						nodeInfo._props.ori_y !== params[p].y ||
-						nodeInfo._props.ori_z !== params[p].z ||
-						nodeInfo._props.oriup_x !== params[p].upx ||
-						nodeInfo._props.oriup_y !== params[p].upy ||
-						nodeInfo._props.oriup_z !== params[p].upz
-					) {
-						nodeInfo._props.ori_x = params[p].x;
-						nodeInfo._props.ori_y = params[p].y;
-						nodeInfo._props.ori_z = params[p].z;
-						nodeInfo._props.oriup_x = params[p].upx;
-						nodeInfo._props.oriup_y = params[p].upy;
-						nodeInfo._props.oriup_z = params[p].upz;
-						if (this.ac.listener) {
-							DEBUG && console.log(`Voice._set(): setting listener orientation:`, nodeInfo._props);
-							this.ac.listener.setOrientation(
-								nodeInfo._props.ori_x,
-								nodeInfo._props.ori_y,
-								nodeInfo._props.ori_z,
-								nodeInfo._props.oriup_x,
-								nodeInfo._props.oriup_y,
-								nodeInfo._props.oriup_z
-							);
-						}
-					}
-				} else if (p === 'dopplerFactor') {
-					nodeInfo._props.dopplerFactor = params[p];
+
+				if (p === 'positionX') {
+					nodeInfo._props.positionX = params[p];
 					if (this.ac.listener) {
-						this.ac.listener.dopplerFactor = nodeInfo._props.dopplerFactor;
+						this.ac.listener.positionX.cancelScheduledValues(when);
+						if (ramp === 0) {
+							this.ac.listener.positionX.setValueAtTime(nodeInfo._props.positionX, when);
+						} else {
+							this.ac.listener.positionX.setTargetAtTime(nodeInfo._props.positionX, when, ramp);
+						}
+					}
+				} else if (p === 'positionY') {
+					nodeInfo._props.positionY = params[p];
+					if (this.ac.listener) {
+						this.ac.listener.positionY.cancelScheduledValues(when);
+						if (ramp === 0) {
+							this.ac.listener.positionY.setValueAtTime(nodeInfo._props.positionY, when);
+						} else {
+							this.ac.listener.positionY.setTargetAtTime(nodeInfo._props.positionY, when, ramp);
+						}
+					}
+				} else if (p === 'positionZ') {
+					nodeInfo._props.positionZ = params[p];
+					if (this.ac.listener) {
+						this.ac.listener.positionZ.cancelScheduledValues(when);
+						if (ramp === 0) {
+							this.ac.listener.positionZ.setValueAtTime(nodeInfo._props.positionZ, when);
+						} else {
+							this.ac.listener.positionZ.setTargetAtTime(nodeInfo._props.positionZ, when, ramp);
+						}
+					}
+				} else if (p === 'forwardX') {
+					nodeInfo._props.forwardX = params[p];
+					if (this.ac.listener) {
+						this.ac.listener.forwardX.cancelScheduledValues(when);
+						if (ramp === 0) {
+							this.ac.listener.forwardX.setValueAtTime(nodeInfo._props.forwardX, when);
+						} else {
+							this.ac.listener.forwardX.setTargetAtTime(nodeInfo._props.forwardX, when, ramp);
+						}
+					}
+				} else if (p === 'forwardY') {
+					nodeInfo._props.forwardY = params[p];
+					if (this.ac.listener) {
+						this.ac.listener.forwardY.cancelScheduledValues(when);
+						if (ramp === 0) {
+							this.ac.listener.forwardY.setValueAtTime(nodeInfo._props.forwardY, when);
+						} else {
+							this.ac.listener.forwardY.setTargetAtTime(nodeInfo._props.forwardY, when, ramp);
+						}
+					}
+				} else if (p === 'forwardZ') {
+					nodeInfo._props.forwardZ = params[p];
+					if (this.ac.listener) {
+						this.ac.listener.forwardZ.cancelScheduledValues(when);
+						if (ramp === 0) {
+							this.ac.listener.forwardZ.setValueAtTime(nodeInfo._props.forwardZ, when);
+						} else {
+							this.ac.listener.forwardZ.setTargetAtTime(nodeInfo._props.forwardZ, when, ramp);
+						}
+					}
+				} else if (p === 'upX') {
+					nodeInfo._props.upX = params[p];
+					if (this.ac.listener) {
+						this.ac.listener.upX.cancelScheduledValues(when);
+						if (ramp === 0) {
+							this.ac.listener.upX.setValueAtTime(nodeInfo._props.upX, when);
+						} else {
+							this.ac.listener.upX.setTargetAtTime(nodeInfo._props.upX, when, ramp);
+						}
+					}
+				} else if (p === 'upY') {
+					nodeInfo._props.upY = params[p];
+					if (this.ac.listener) {
+						this.ac.listener.upY.cancelScheduledValues(when);
+						if (ramp === 0) {
+							this.ac.listener.upY.setValueAtTime(nodeInfo._props.upY, when);
+						} else {
+							this.ac.listener.upY.setTargetAtTime(nodeInfo._props.upY, when, ramp);
+						}
+					}
+				} else if (p === 'upZ') {
+					nodeInfo._props.upZ = params[p];
+					if (this.ac.listener) {
+						this.ac.listener.upZ.cancelScheduledValues(when);
+						if (ramp === 0) {
+							this.ac.listener.upZ.setValueAtTime(nodeInfo._props.upZ, when);
+						} else {
+							this.ac.listener.upZ.setTargetAtTime(nodeInfo._props.upZ, when, ramp);
+						}
 					}
 				} else {
 					console.warn(`Voice._set(): param '${p}' not known for type '${nodeInfo.type}'.`);
