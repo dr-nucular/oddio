@@ -1,6 +1,6 @@
 import Oddio from './Oddio';
 
-const DEBUG = true;
+const DEBUG = false;
 
 class Graph {
 	constructor(config) {
@@ -269,6 +269,13 @@ class Voice {
 					this.graph[g]._props.upX = 0;
 					this.graph[g]._props.upY = 1;
 					this.graph[g]._props.upZ = 0;
+
+					console.log(`Voice.buildGraph(): output numberOfInputs:`, this.ac.destination.numberOfInputs);
+					console.log(`Voice.buildGraph(): output numberOfOutputs:`, this.ac.destination.numberOfOutputs);
+					console.log(`Voice.buildGraph(): output channelCount:`, this.ac.destination.channelCount);
+					console.log(`Voice.buildGraph(): output channelCountMode:`, this.ac.destination.channelCountMode);
+					console.log(`Voice.buildGraph(): output channelInterpretation:`, this.ac.destination.channelInterpretation);
+	
 				} else {
 					console.warn(`Voice.buildGraph(): type '${this.graph[g].type}' not supported`);
 				}
@@ -864,6 +871,11 @@ class Voice {
 							nodeInfo._audio_node.orientationZ.setTargetAtTime(nodeInfo._props.orientationZ, when, ramp);
 						}
 					}
+				} else if (p === 'panningModel') {
+					nodeInfo._props.panningModel = params[p];
+					if (nodeInfo._audio_node) {
+						nodeInfo._audio_node.panningModel = nodeInfo._props.panningModel;
+					}
 				} else if (p === 'distanceModel') {
 					nodeInfo._props.distanceModel = params[p];
 					if (nodeInfo._audio_node) {
@@ -883,6 +895,21 @@ class Voice {
 					nodeInfo._props.rolloffFactor = params[p];
 					if (nodeInfo._audio_node) {
 						nodeInfo._audio_node.rolloffFactor = nodeInfo._props.rolloffFactor;
+					}
+				} else if (p === 'coneInnerAngle') {
+					nodeInfo._props.coneInnerAngle = params[p];
+					if (nodeInfo._audio_node) {
+						nodeInfo._audio_node.coneInnerAngle = nodeInfo._props.coneInnerAngle;
+					}
+				} else if (p === 'coneOuterAngle') {
+					nodeInfo._props.coneOuterAngle = params[p];
+					if (nodeInfo._audio_node) {
+						nodeInfo._audio_node.coneOuterAngle = nodeInfo._props.coneOuterAngle;
+					}
+				} else if (p === 'coneOuterGain') {
+					nodeInfo._props.coneOuterGain = params[p];
+					if (nodeInfo._audio_node) {
+						nodeInfo._audio_node.coneOuterGain = nodeInfo._props.coneOuterGain;
 					}
 				} else {
 					console.warn(`Voice._set(): param '${p}' not known for type '${nodeInfo.type}'.`);

@@ -132,3 +132,39 @@ export const trimmedMean = (values, trimPerc) => {
     const trimCount = Math.floor(trimPerc * values.length);
     return mean(values.sort((a, b) => a - b).slice(trimCount, values.length - trimCount));
 };
+
+/**
+ * @template T
+ * @param {T[]} srcArray
+ * @param {boolean} ensureDifferentOrder if true, then will ensure result order is different from srcArray (if > 1 element)
+ * @returns {T[]} a new array with a shuffle attempted on items
+ */
+ export const shuffle = (srcArray, ensureDifferentOrder = false) => {
+	const result = srcArray.slice(0); // make a copy
+	const arrayLen = result.length;
+	if (arrayLen < 2) return result;
+
+	let shuffleCompleted = false;
+	const maxTries = 10;
+	for (let t = 0; t < maxTries; t++) {
+		// Fisher-Yates shuffle
+		let curIdx = arrayLen;
+		let tmpVal, randIdx;
+		while (0 !== curIdx) {
+			// pick a random remaining item
+			randIdx = Math.floor(Math.random() * curIdx);
+			curIdx -= 1;
+			// swap it with current item
+			tmpVal = result[curIdx];
+			result[curIdx] = result[randIdx];
+			result[randIdx] = tmpVal;
+		}
+		// end FY shuffle
+
+		if (!ensureDifferentOrder || !areEqual(result, srcArray)) {
+			shuffleCompleted = true;
+			break;
+		}
+	}
+	return shuffleCompleted ? result : derange(srcArray);
+};

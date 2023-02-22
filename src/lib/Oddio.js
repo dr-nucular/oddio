@@ -39,6 +39,12 @@ class Oddio {
 		}
 		try {
 			this.ac = new (window.AudioContext || window.webkitAudioContext)();
+			console.log(`Oddio.init(): destination numberOfInputs:`, this.ac.destination.numberOfInputs);
+			console.log(`Oddio.init(): destination numberOfOutputs:`, this.ac.destination.numberOfOutputs);
+			console.log(`Oddio.init(): destination channelCount:`, this.ac.destination.channelCount);
+			console.log(`Oddio.init(): destination channelCountMode:`, this.ac.destination.channelCountMode);
+			console.log(`Oddio.init(): destination channelInterpretation:`, this.ac.destination.channelInterpretation);
+			// this might be TEMP
 			const buffsAlreadyCreated = Object.keys(this.buffs);
 			buffsAlreadyCreated.forEach(key => {
 				this.buffs[key].refreshAudioContext();

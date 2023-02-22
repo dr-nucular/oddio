@@ -1,6 +1,9 @@
 import Phaser from 'phaser';
 import Oddio from '$lib/Oddio';
 import { sSounds } from '../stores.js';
+import { shuffle } from '$lib/utils.js';
+
+const DIST_MULTIPLIER = 10;
 
 const GRAPHS = {
 	"stereoMaster": {
@@ -41,6 +44,21 @@ const GRAPHS = {
 								"upX": 0,
 								"upY": 1,
 								"upZ": 0
+							}
+						}
+					}
+				]
+			},
+			"move": {
+				"params": { "delay": 0, "x": 0, "y": 0, "z": 0 },
+				"steps": [
+					{
+						"set": {
+							"master:output": {
+								"delay": "delay",
+								"positionX": "x",
+								"positionY": "y",
+								"positionZ": "z"
 							}
 						}
 					}
@@ -90,15 +108,15 @@ const GRAPHS = {
 								"refDistance": 1,
 								"maxDistance": 100,
 								"rolloffFactor": 1,
-								"coneInnerAngle": 90,
-								"coneOuterAngle": 270,
-								"coneOuterGain": 0.25,
+								"coneInnerAngle": 60,
+								"coneOuterAngle": 300,
+								"coneOuterGain": 0.65,
 								"positionX": 0,
 								"positionY": 0,
 								"positionZ": 0,
 								"orientationX": 0,
 								"orientationY": 0,
-								"orientationZ": -1,								
+								"orientationZ": 1,								
 							},
 							"mix": { "gain": 1 }
 						}
@@ -106,11 +124,11 @@ const GRAPHS = {
 				]
 			},
 			"play": {
-				"params": { "soundId": null, "acTime": 0 },
+				"params": { "soundId": null, "acTime": 0, "offset": 0 },
 				"steps": [
 					{
 						"play": {
-							"src": { "sound": "soundId", "when": "acTime" }
+							"src": { "sound": "soundId", "when": "acTime", "offset": "offset" }
 						}
 					}
 				]
@@ -124,8 +142,7 @@ const GRAPHS = {
 								"delay": "delay",
 								"positionX": "x",
 								"positionY": "y",
-								"positionZ": "z",
-								"ramp": 1
+								"positionZ": "z"
 							}
 						}
 					}
@@ -182,11 +199,11 @@ const GRAPHS = {
 				]
 			},
 			"play": {
-				"params": { "soundId": null, "acTime": 0 },
+				"params": { "soundId": null, "acTime": 0, "offset": 0 },
 				"steps": [
 					{
 						"play": {
-							"src": { "sound": "soundId", "when": "acTime" }
+							"src": { "sound": "soundId", "when": "acTime", "offset": "offset" }
 						}
 					}
 				]
@@ -324,10 +341,13 @@ export default class SpatialPlayground extends Phaser.Scene {
 		this.textStyleDecoded = { fontFamily: 'Arial', fontSize: 32, color: 'green' };
 		this.textStylePlaying = { fontFamily: 'Arial', fontSize: 32, color: 'white' };
 		this.playText = null;
-		this.updatePosText = null;
+		this.youText = null;
 
 		this.tracks = []; // array of objs
 		this.voices = [];
+		this.outputVoice = null;
+
+		this.musicOffset = 0;
 
 		this.events.on('destroy', this.destroy.bind(this));
 	}
@@ -341,7 +361,7 @@ export default class SpatialPlayground extends Phaser.Scene {
 		console.log(`SpatialPlayground.create()`);
 
 		// tracks, textSprites etc
-		this.tracks = this.soundsArray.map((soundData, s) => {
+		const tracks = this.soundsArray.map((soundData, s) => {
 			const perc = s / this.soundsArray.length;
 			const rads = perc * 2 * Math.PI;
 			const x = this.centerPosition.x + (Math.sin(rads) * 300);
@@ -350,6 +370,7 @@ export default class SpatialPlayground extends Phaser.Scene {
 			textSprite.setOrigin(0.5, 0.5);
 			return { soundData, textSprite };
 		});
+		this.tracks = shuffle(tracks);
 
 		// add interaction
 		this.tracks.forEach(track => {
@@ -361,32 +382,47 @@ export default class SpatialPlayground extends Phaser.Scene {
 
 		// playText
 		this.playText = this.add.text(
-			this.centerPosition.x,
-			this.centerPosition.y,
-			`PLAY`,
-			this.textStylePlaying
+			this.canvas.width * 0.05, this.canvas.height * 0.05, `PLAY`, this.textStylePlaying
 		);
-		this.playText.setOrigin(0.5, 0.5);
-		this.playText.on('pointerdown', (e) => {
-			this.togglePlay(e);
-		}, this);
+		this.playText.setOrigin(0, 0.5);
+		this.playText.on('pointerdown', (e) => { this.togglePlay(e) }, this);
 		this.playText.setInteractive();
 
-		// updatePosText
-		this.updatePosText = this.add.text(
-			this.centerPosition.x,
-			this.centerPosition.y + 50,
-			`UPDATE POS`,
-			this.textStylePlaying
+		// youText
+		this.youText = this.add.text(
+			this.canvas.width * 0.5, this.canvas.height * 0.5, `YOU`, this.textStylePlaying
 		);
-		this.updatePosText.setOrigin(0.5, 0.5);
-		this.updatePosText.on('pointerdown', (e) => {
-			this.updatePos(e);
-		}, this);
-		this.updatePosText.setInteractive();
+		this.youText.setOrigin(0.5, 0.5);
+		this.youText.setInteractive();
+		this.input.setDraggable(this.youText);
+		this.input.on('drag', this.onListenerMove.bind(this));
 		
+		// setOffsetText
+		const setOffsetText = this.add.text(
+			this.canvas.width * 0.05, this.canvas.height * 0.1, `Set Offset 2:27`, this.textStyleDecoding
+		);
+		setOffsetText.setOrigin(0, 0.5);
+		setOffsetText.on('pointerdown', (e) => { this.musicOffset = 147 }, this);
+		setOffsetText.setInteractive();
+
+		// setOffsetText2
+		const setOffsetText2 = this.add.text(
+			this.canvas.width * 0.05, this.canvas.height * 0.15, `Set Offset 4:26`, this.textStyleDecoding
+		);
+		setOffsetText2.setOrigin(0, 0.5);
+		setOffsetText2.on('pointerdown', (e) => { this.musicOffset = 266 }, this);
+		setOffsetText2.setInteractive();
+
+		// setOffsetText3
+		const setOffsetText3 = this.add.text(
+			this.canvas.width * 0.05, this.canvas.height * 0.2, `Set Offset 5:00`, this.textStyleDecoding
+		);
+		setOffsetText3.setOrigin(0, 0.5);
+		setOffsetText3.on('pointerdown', (e) => { this.musicOffset = 300 }, this);
+		setOffsetText3.setInteractive();
 
 		// dumb thing
+		/*
 		const logo = this.add.image(this.canvas.width * 0.15, this.canvas.height * 0.05, 'logo');
 		logo.setScale(0.5);
 		this.tweens.add({
@@ -397,6 +433,7 @@ export default class SpatialPlayground extends Phaser.Scene {
 			yoyo: true,
 			repeat: -1
 		});
+		*/
 
 		this.setGraphs();
 	}
@@ -405,41 +442,32 @@ export default class SpatialPlayground extends Phaser.Scene {
 		const s = time * 0.0005;
 		this.tracks.forEach((track, t) => {
 			const perc = t / this.tracks.length;
+			//const rads = perc * 2 * Math.PI;
 			const rads = perc * 1 * Math.PI;
 			const x = this.centerPosition.x + (Math.sin(rads + s) * 300);
 			const y = this.centerPosition.y - (Math.cos(rads + s) * 300);
 			track.textSprite.setPosition(x, y);
-			/*
-			// voice set position. y maps to z in 3d space
-			if (track.voice?.graphId === 'monoSource') {
-				const oddioPosX = x / this.centerPosition.x - 1.0; // -1 to +1, Left to Right
-				const oddioPosZ = y / this.centerPosition.y - 1.0; // -1 to +1, Front to Rear
-				track.voice.doMethod('move', {
-					delay: 1 / 60, x: oddioPosX, z: oddioPosZ
-				});
-			}
-			*/
 		});
+		this.updateSourcePositions();
 	}
 
-	updatePos(e) {
-		console.log(`SpatialPlayground.updatePos():`, e);
-		this.tracks.forEach((track, t) => {
+	/**************************
+	 * Custom methods
+	 ****************************/
 
-			
+	updateSourcePositions() {
+		//console.log(`SpatialPlayground.updateSourcePositions()`);
+		this.tracks.forEach((track, t) => {
 			// voice set position. y maps to z in 3d space
 			if (track.voice?.graphId === 'monoSource') {
 				const x = track.textSprite.x;
 				const y = track.textSprite.y;
-				console.log(`....updatePos of ${track.soundData.id}:`, x, y);
+				//console.log(`....updatePos of ${track.soundData.id}:`, x, y);
 	
 				const oddioPosX = x / this.centerPosition.x - 1.0; // -1 to +1, Left to Right
 				const oddioPosZ = y / this.centerPosition.y - 1.0; // -1 to +1, Front to Rear
-				track.voice.doMethod('move', {
-					delay: 1 / 60, x: oddioPosX, z: oddioPosZ
-				});
+				track.voice.doMethod('move', { x: oddioPosX * DIST_MULTIPLIER, z: oddioPosZ * DIST_MULTIPLIER });
 			}
-			
 		});
 	}
 
@@ -450,8 +478,8 @@ export default class SpatialPlayground extends Phaser.Scene {
 			Oddio.setGraph(gKey, GRAPHS[gKey]);
 		});
 		// create outputGraph instance
-		const outputVoice = Oddio.createVoice('stereoMaster', 'output');
-		outputVoice.doMethod('init');
+		this.outputVoice = Oddio.createVoice('stereoMaster', 'output');
+		this.outputVoice.doMethod('init');
 	}
 
 	async onTrackDn(track, e) {
@@ -530,7 +558,8 @@ export default class SpatialPlayground extends Phaser.Scene {
 					}
 					track.voice.doMethod('play', {
 						soundId: track.soundData.id,
-						acTime: 0
+						acTime: 0,
+						offset: this.musicOffset
 					});
 	
 					
@@ -557,9 +586,28 @@ export default class SpatialPlayground extends Phaser.Scene {
 			});
 
 			this.playText.setText(`STOP`);
+
+			console.log(`SpatialPlayground.onTrackDn(): destination numberOfInputs:`, Oddio.getAC().destination.numberOfInputs);
+			console.log(`SpatialPlayground.onTrackDn(): destination numberOfOutputs:`, Oddio.getAC().destination.numberOfOutputs);
+			console.log(`SpatialPlayground.onTrackDn(): destination channelCount:`, Oddio.getAC().destination.channelCount);
+			console.log(`SpatialPlayground.onTrackDn(): destination channelCountMode:`, Oddio.getAC().destination.channelCountMode);
+			console.log(`SpatialPlayground.onTrackDn(): destination channelInterpretation:`, Oddio.getAC().destination.channelInterpretation);
+
+
 		}
 	}
 
+	onListenerMove(pointer, uText, x, y) {
+		console.log(`SpatialPlayground.onListenerMove()`);
+		uText.x = x;
+		uText.y = y;
+		// calculate listener positions etc
+		const oddioPosX = x / this.centerPosition.x - 1.0; // -1 to +1, Left to Right
+		const oddioPosZ = y / this.centerPosition.y - 1.0; // -1 to +1, Front to Rear
+		console.log(`SpatialPlayground.onListenerMove()`, oddioPosX, oddioPosZ);
+		this.outputVoice.doMethod('move', { x: oddioPosX * DIST_MULTIPLIER, z: oddioPosZ * DIST_MULTIPLIER });
+	}
+	
 	setTrackTextStyle(track) {
 		console.log(`SpatialPlayground.setTrackTextStyle():`, track);
 
