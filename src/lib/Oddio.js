@@ -41,6 +41,7 @@ class Oddio {
 			this.ac = new (window.AudioContext || window.webkitAudioContext)();
 			console.log(`Oddio.init(): destination numberOfInputs:`, this.ac.destination.numberOfInputs);
 			console.log(`Oddio.init(): destination numberOfOutputs:`, this.ac.destination.numberOfOutputs);
+			console.log(`Oddio.init(): destination maxChannelCount:`, this.ac.destination.maxChannelCount);
 			console.log(`Oddio.init(): destination channelCount:`, this.ac.destination.channelCount);
 			console.log(`Oddio.init(): destination channelCountMode:`, this.ac.destination.channelCountMode);
 			console.log(`Oddio.init(): destination channelInterpretation:`, this.ac.destination.channelInterpretation);
